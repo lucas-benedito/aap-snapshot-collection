@@ -1,0 +1,9 @@
+---
+exclude_paths:
+  - .github
+  - scripts
+  - tests
+offline: true
+strict: true
+skip_list:
+  - var-naming[no-role-prefix]
