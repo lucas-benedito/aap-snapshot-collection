@@ -1,0 +1,41 @@
+---
+default_stages: [pre-push]
+repos:
+  - repo: "https://github.com/pre-commit/pre-commit-hooks"
+    rev: v5.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+  - repo: https://github.com/leaktk/leaktk
+    rev: v0.3.3
+    hooks:
+      - id: leaktk.git.pre-commit
+  - repo: https://github.com/ambv/black
+    rev: 25.1.0
+    hooks:
+      - id: black
+        name: black
+        entry: black
+        args: [--config=.black.cfg, --check, --diff]
+        types: [python]
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.2.0
+    hooks:
+      - id: flake8
+        name: flake8
+        entry: flake8
+        types: [python]
+  - repo: local
+    hooks:
+      - id: ansible-lint
+        name: ansible-lint
+        entry: ansible-lint
+        language: system
+        pass_filenames: false
+        types: [yaml]
+      - id: unit-tests
+        name: unit-tests
+        entry: pytest tests/unit/ -q
+        language: system
+        pass_filenames: false
+        always_run: true
