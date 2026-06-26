@@ -7,6 +7,61 @@ from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
 
+DOCUMENTATION = r"""
+name: parse_aap_version
+short_description: Parse an AAP version string into structured components
+version_added: "1.0.0"
+description:
+  - Parses AAP version strings into a dictionary with major, minor, patch,
+    major_minor, and full keys.
+  - Handles standard versions (2.6.3), two-part versions (2.7),
+    prerelease versions (2.6.3-rc1), and Operator CSV versions
+    (aap-operator.v2.6.0-0.1777410689).
+positional: _input
+options:
+  _input:
+    description: The version string to parse.
+    type: str
+    required: true
+"""
+
+EXAMPLES = r"""
+- name: Parse a standard version
+  ansible.builtin.debug:
+    msg: "{{ '2.6.3' | ansible.aap_snapshot.parse_aap_version }}"
+
+- name: Extract major.minor from an Operator CSV version
+  ansible.builtin.set_fact:
+    aap_version: >-
+      {{ csv_version | ansible.aap_snapshot.parse_aap_version
+         | community.general.json_query('major_minor') }}
+"""
+
+RETURN = r"""
+_value:
+  description: Dictionary with parsed version components.
+  type: dict
+  contains:
+    major:
+      description: Major version number.
+      type: str
+    minor:
+      description: Minor version number.
+      type: str
+    patch:
+      description: Patch version number (defaults to 0).
+      type: str
+    major_minor:
+      description: Major.minor string.
+      type: str
+    full:
+      description: Original input string.
+      type: str
+    timestamp:
+      description: Build timestamp from Operator CSV versions, if present.
+      type: str
+"""
+
 import re
 
 from ansible.errors import AnsibleFilterError
