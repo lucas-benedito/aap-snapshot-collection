@@ -1,0 +1,46 @@
+---
+- name: "Set idle_aap to {{ ocp_idle_aap | bool }}"
+  kubernetes.core.k8s:
+    api_version: "{{ ocp_utils_aap_cr_api_version }}"
+    kind: "{{ ocp_utils_aap_cr_kind }}"
+    name: "{{ ocp_utils_aap_instance_name }}"
+    namespace: "{{ ocp_utils_ocp_namespace }}"
+    state: patched
+    merge_type: merge
+    definition:
+      spec:
+        idle_aap: "{{ ocp_idle_aap | bool }}"
+
+- name: Wait for AAP pods to stop
+  when: ocp_idle_aap | bool
+  block:
+    - name: Wait for component pods to terminate
+      kubernetes.core.k8s_info:
+        kind: Pod
+        namespace: "{{ ocp_utils_ocp_namespace }}"
+        label_selectors:
+          - "app.kubernetes.io/managed-by={{ ocp_utils_aap_instance_name }}"
+      register: _ocp_utils_aap_pods
+      until: >-
+        _ocp_utils_aap_pods.resources
+        | rejectattr('metadata.name', 'match', '.*postgres.*')
+        | rejectattr('metadata.name', 'match', '.*operator.*')
+        | list | length == 0
+      retries: "{{ ocp_utils_idle_wait_retries }}"
+      delay: "{{ ocp_utils_idle_wait_delay }}"
+
+- name: Wait for AAP pods to start
+  when: not (ocp_idle_aap | bool)
+  block:
+    - name: Wait for gateway pod to be running
+      kubernetes.core.k8s_info:
+        kind: Pod
+        namespace: "{{ ocp_utils_ocp_namespace }}"
+        label_selectors:
+          - "app.kubernetes.io/component=aap-gateway"
+      register: _ocp_utils_gateway_pods
+      until: >-
+        _ocp_utils_gateway_pods.resources | length > 0
+        and (_ocp_utils_gateway_pods.resources | map(attribute='status.phase') | select('equalto', 'Running') | list | length > 0)
+      retries: "{{ ocp_utils_idle_wait_retries }}"
+      delay: "{{ ocp_utils_idle_wait_delay }}"

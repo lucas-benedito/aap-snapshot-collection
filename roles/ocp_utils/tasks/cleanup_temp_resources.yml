@@ -1,0 +1,18 @@
+---
+- name: Delete temporary deployment
+  kubernetes.core.k8s:
+    kind: Deployment
+    name: "{{ ocp_utils_temp_deployment_name }}"
+    namespace: "{{ ocp_utils_ocp_namespace }}"
+    state: absent
+    wait: true
+    wait_timeout: 120
+
+- name: Delete temporary PVC
+  kubernetes.core.k8s:
+    kind: PersistentVolumeClaim
+    name: "{{ ocp_utils_temp_pvc_name }}"
+    namespace: "{{ ocp_utils_ocp_namespace }}"
+    state: absent
+    wait: true
+    wait_timeout: 120

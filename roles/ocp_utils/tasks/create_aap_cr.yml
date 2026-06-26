@@ -1,0 +1,73 @@
+---
+- name: Build component list from artifact manifest
+  ansible.builtin.set_fact:
+    _ocp_utils_aap_cr_components: >-
+      {{ artifact_manifest.components | map(attribute='name') | list }}
+
+- name: Seed encryption secrets from artifact
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: "{{ item.secret_name }}"
+        namespace: "{{ ocp_utils_ocp_namespace }}"
+      type: Opaque
+      stringData: "{{ {item.field: artifact_secrets[item.artifact_key] | b64decode} }}"
+  loop: >-
+    {{ __ocp_utils_artifact_secret_mapping
+       | selectattr('component', 'in', _ocp_utils_aap_cr_components)
+       | selectattr('artifact_key', 'in', artifact_secrets)
+       | list }}
+  loop_control:
+    label: "{{ item.secret_name }}"
+  no_log: "{{ (disable_no_log | default(false) | bool) | ternary(false, true) }}"
+
+- name: Build hub spec
+  ansible.builtin.set_fact:
+    _ocp_utils_hub_spec: >-
+      {{ {'file_storage_storage_class': hub_file_storage_class}
+         if hub_file_storage_class | default('') | length > 0
+         else {} }}
+  when: "'hub' in _ocp_utils_aap_cr_components"
+
+- name: Create AnsibleAutomationPlatform CR
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: "{{ ocp_utils_aap_cr_api_version }}"
+      kind: "{{ ocp_utils_aap_cr_kind }}"
+      metadata:
+        name: "{{ ocp_utils_aap_instance_name }}"
+        namespace: "{{ ocp_utils_ocp_namespace }}"
+      spec:
+        db_fields_encryption_secret: "{{ ocp_utils_aap_instance_name }}-db-fields-encryption-secret"
+        controller: "{{ {} if 'controller' in _ocp_utils_aap_cr_components else omit }}"
+        hub: "{{ _ocp_utils_hub_spec | default({}) if 'hub' in _ocp_utils_aap_cr_components else omit }}"
+        eda: "{{ {} if 'eda' in _ocp_utils_aap_cr_components else omit }}"
+
+- name: Wait for AAP postgres StatefulSet to be ready
+  kubernetes.core.k8s_info:
+    kind: StatefulSet
+    name: "{{ ocp_utils_postgres_statefulset }}"
+    namespace: "{{ ocp_utils_ocp_namespace }}"
+  register: _ocp_utils_pg_sts
+  until: >-
+    _ocp_utils_pg_sts.resources | length > 0
+    and (_ocp_utils_pg_sts.resources[0].status.readyReplicas | default(0) | int) > 0
+  retries: 60
+  delay: 10
+
+- name: Wait for component DB secrets to be provisioned
+  kubernetes.core.k8s_info:
+    kind: Secret
+    name: "{{ __ocp_utils_component_postgres_secrets[item] }}"
+    namespace: "{{ ocp_utils_ocp_namespace }}"
+  register: _ocp_utils_secret_check
+  until: _ocp_utils_secret_check.resources | length > 0
+  retries: 60
+  delay: 10
+  loop: "{{ _ocp_utils_aap_cr_components }}"
+  loop_control:
+    label: "{{ item }}"

@@ -1,0 +1,63 @@
+---
+# Kubeconfig resolution: -e kubeconfig=/path > K8S_AUTH_KUBECONFIG > KUBECONFIG > default (~/.kube/config)
+__ocp_utils_resolved_kubeconfig: >-
+  {{ kubeconfig
+     | default(lookup('env', 'K8S_AUTH_KUBECONFIG'), true)
+     | default(lookup('env', 'KUBECONFIG'), true)
+     | default('', true) }}
+
+ocp_utils_ocp_environment: >-
+  {{ {'K8S_AUTH_KUBECONFIG': __ocp_utils_resolved_kubeconfig}
+     if (aap_platform | default('') == 'operator' and __ocp_utils_resolved_kubeconfig | length > 0)
+     else {} }}
+
+ocp_utils_ocp_namespace: "aap"
+ocp_utils_operator_namespace: "{{ ocp_utils_ocp_namespace }}"
+ocp_utils_aap_instance_name: "aap"
+ocp_utils_aap_cr_kind: "AnsibleAutomationPlatform"
+ocp_utils_aap_cr_api_version: "aap.ansible.com/v1alpha1"
+
+__ocp_utils_aap_deployment_type: "aap"
+
+ocp_utils_temp_pvc_name: "aap-snapshot-temp"
+ocp_utils_temp_pvc_size: "200Gi"
+ocp_utils_temp_pvc_access_mode: "ReadWriteOnce"
+ocp_utils_temp_deployment_name: "aap-snapshot-temp-postgres"
+ocp_utils_temp_postgres_image: "registry.redhat.io/rhel9/postgresql-15:latest"
+
+ocp_utils_postgres_statefulset: "{{ ocp_utils_aap_instance_name }}-postgres-15"
+ocp_utils_gateway_operator_deployment: "aap-gateway-operator-controller-manager"
+ocp_utils_controller_operator_deployment: "automation-controller-operator-controller-manager"
+
+ocp_utils_idle_wait_retries: 60
+ocp_utils_idle_wait_delay: 10
+ocp_utils_scale_wait_retries: 30
+ocp_utils_scale_wait_delay: 10
+
+__ocp_utils_component_postgres_secrets:
+  controller: "{{ ocp_utils_aap_instance_name }}-controller-postgres-configuration"
+  hub: "{{ ocp_utils_aap_instance_name }}-hub-postgres-configuration"
+  gateway: "{{ ocp_utils_aap_instance_name }}-gateway-postgres-configuration"
+  eda: "{{ ocp_utils_aap_instance_name }}-eda-postgres-configuration"
+
+__ocp_utils_artifact_secret_mapping:
+  - component: gateway
+    secret_name: "{{ ocp_utils_aap_instance_name }}-db-fields-encryption-secret"
+    field: "secret_key"
+    artifact_key: "gateway_secret_key"
+  - component: controller
+    secret_name: "{{ ocp_utils_aap_instance_name }}-controller-secret-key"
+    field: "secret_key"
+    artifact_key: "controller_secret_key"
+  - component: hub
+    secret_name: "{{ ocp_utils_aap_instance_name }}-hub-db-fields-encryption"
+    field: "database_fields.symmetric.key"
+    artifact_key: "hub_db_fields_encryption_key"
+  - component: eda
+    secret_name: "{{ ocp_utils_aap_instance_name }}-eda-secret-key"
+    field: "secret_key"
+    artifact_key: "eda_secret_key"
+  - component: eda
+    secret_name: "{{ ocp_utils_aap_instance_name }}-eda-db-fields-encryption-secret"
+    field: "secret_key"
+    artifact_key: "eda_secret_key"

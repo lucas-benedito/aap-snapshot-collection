@@ -1,0 +1,17 @@
+---
+- name: "Find running pod for {{ _ocp_pod_label }}"
+  kubernetes.core.k8s_info:
+    kind: Pod
+    namespace: "{{ ocp_utils_ocp_namespace }}"
+    label_selectors:
+      - "{{ _ocp_pod_label_key | default('app.kubernetes.io/name') }}={{ _ocp_pod_label }}"
+    field_selectors:
+      - "status.phase=Running"
+  register: _ocp_utils_found_pods
+  until: _ocp_utils_found_pods.resources | length > 0
+  retries: "{{ _ocp_pod_retries | default(10) }}"
+  delay: "{{ _ocp_pod_delay | default(5) }}"
+
+- name: Set pod name fact
+  ansible.builtin.set_fact:
+    "{{ _ocp_pod_fact | default('_found_pod_name') }}": "{{ _ocp_utils_found_pods.resources[0].metadata.name }}"

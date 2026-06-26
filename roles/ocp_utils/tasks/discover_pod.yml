@@ -1,0 +1,24 @@
+---
+- name: "Discover pod for {{ _discover_label }}"
+  kubernetes.core.k8s_info:
+    kind: Pod
+    namespace: "{{ ocp_utils_ocp_namespace }}"
+    label_selectors: "{{ _discover_selectors }}"
+    field_selectors:
+      - "status.phase=Running"
+  register: _ocp_utils_discovered_pod
+  until: >-
+    _ocp_utils_discovered_pod.resources | length > 0
+    and (_ocp_utils_discovered_pod.resources[0].status.conditions
+         | default([])
+         | selectattr('type', 'equalto', 'Ready')
+         | selectattr('status', 'equalto', 'True')
+         | list | length > 0)
+  retries: "{{ _discover_retries | default(30) }}"
+  delay: "{{ _discover_delay | default(10) }}"
+
+- name: "Set pod facts for {{ _discover_label }}"
+  ansible.builtin.set_fact:
+    "{{ _discover_pod_fact }}": "{{ _ocp_utils_discovered_pod.resources[0].metadata.name }}"
+    "{{ _discover_container_fact }}": "{{ _discover_container_name }}"
+  when: _ocp_utils_discovered_pod.resources | length > 0
