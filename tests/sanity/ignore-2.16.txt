@@ -1,7 +1,0 @@
-plugins/modules/validate_migration_artifact.py import-3.8
-plugins/modules/validate_migration_artifact.py import-3.9
-plugins/modules/validate_migration_artifact.py import-3.10
-plugins/modules/validate_migration_artifact.py import-3.11
-plugins/modules/validate_migration_artifact.py import-3.12
-plugins/modules/validate_migration_artifact.py import-3.13
-plugins/modules/validate_migration_artifact.py import-3.14

@@ -77,7 +77,13 @@ errors:
 import hashlib
 import os
 
-import yaml
+try:
+    import yaml
+
+    HAS_YAML = True
+except ImportError:
+    HAS_YAML = False
+
 from ansible.module_utils.basic import AnsibleModule
 
 
@@ -182,6 +188,9 @@ def main():
         ),
         supports_check_mode=True,
     )
+
+    if not HAS_YAML:
+        module.fail_json(msg="PyYAML is required for this module (pip install pyyaml)")
 
     artifact_dir = module.params["artifact_dir"]
     supported_versions = module.params["supported_schema_versions"]
