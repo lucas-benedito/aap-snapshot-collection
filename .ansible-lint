@@ -7,4 +7,3 @@ exclude_paths:
   - docs
 warn_list:
   - no-log-password
-offline: true
