@@ -76,6 +76,7 @@ errors:
 
 import hashlib
 import os
+import traceback
 
 try:
     import yaml
@@ -83,8 +84,9 @@ try:
     HAS_YAML = True
 except ImportError:
     HAS_YAML = False
+    YAML_IMP_ERR = traceback.format_exc()
 
-from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.basic import AnsibleModule, missing_required_lib
 
 
 def _check_file_exists(artifact_dir, filename):
@@ -190,7 +192,7 @@ def main():
     )
 
     if not HAS_YAML:
-        module.fail_json(msg="PyYAML is required for this module (pip install pyyaml)")
+        module.fail_json(msg=missing_required_lib("PyYAML"), exception=YAML_IMP_ERR)
 
     artifact_dir = module.params["artifact_dir"]
     supported_versions = module.params["supported_schema_versions"]
