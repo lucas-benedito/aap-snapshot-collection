@@ -1,0 +1,77 @@
+---
+name: CI
+on: [pull_request]
+jobs:
+  ansible-lint:
+    runs-on: ubuntu-latest
+    env:
+      python_version: '3.11'
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+
+      - name: Setup python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '${{ env.python_version }}'
+          architecture: x64
+
+      - name: Install ansible-lint
+        run: pip install ansible-lint
+
+      - name: Install galaxy requirements
+        run: ansible-galaxy collection install .
+
+      - name: Run ansible-lint
+        run: ansible-lint
+
+  pre-commit:
+    runs-on: ubuntu-latest
+    env:
+      python_version: '3.11'
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+
+      - name: Setup python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '${{ env.python_version }}'
+
+      - name: Run pre-commit
+        uses: pre-commit/action@v3.0.1
+        env:
+          SKIP: leaktk.git.pre-commit
+
+  secrets-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Run trufflehog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --only-verified
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    env:
+      python_version: '3.11'
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+
+      - name: Setup python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '${{ env.python_version }}'
+
+      - name: Install test dependencies
+        run: pip install pytest pyyaml
+
+      - name: Run unit tests
+        run: pytest tests/unit/ -v
+...
