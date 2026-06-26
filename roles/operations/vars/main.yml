@@ -1,0 +1,127 @@
+---
+_operations_component_config:
+  controller:
+    manage_cmd: "awx-manage"
+    django_user: "awx"
+    container_name: "automation-controller-task"
+    python_package: "awx"
+    secret_keys: ["controller_secret_key"]
+    k8s_secret_name: "{{ ocp_utils_aap_instance_name }}-controller-secret-key"
+    k8s_secret_field: "secret_key"
+    postgres_secret: "{{ ocp_utils_aap_instance_name }}-controller-postgres-configuration"
+    podman_secret_name: "controller_secret_key"
+    admin_password_secret: "controller-admin-password"
+    admin_password_cmd: "update_password --username admin --password"
+    services:
+      - automation-controller-task
+      - automation-controller-web
+      - automation-controller-rsyslog
+      - receptor
+    has_worker_discovery: false
+    has_custom_configs: true
+    has_db_partitions: true
+    has_hub_content: false
+    has_aap_version: false
+    django_environment: {}
+    django_manage_get_cmd: null
+    ocp_extra_secrets: []
+    multi_resource_keys: []
+    static_services: []
+    worker_service_pattern: ""
+
+  eda:
+    manage_cmd: "aap-eda-manage"
+    django_user: "eda"
+    container_name: "automation-eda-api"
+    python_package: "aap_eda"
+    secret_keys: ["eda_secret_key"]
+    k8s_secret_name: "{{ ocp_utils_aap_instance_name }}-eda-db-fields-encryption-secret"
+    k8s_secret_field: "secret_key"
+    postgres_secret: "{{ ocp_utils_aap_instance_name }}-eda-postgres-configuration"
+    podman_secret_name: "eda_secret_key"
+    admin_password_secret: "eda-admin-password"
+    admin_password_cmd: "update_password -u admin -p"
+    services: []
+    has_worker_discovery: true
+    has_custom_configs: false
+    has_db_partitions: false
+    has_hub_content: false
+    has_aap_version: false
+    django_environment: {}
+    django_manage_get_cmd: null
+    ocp_extra_secrets: []
+    multi_resource_keys: []
+    static_services:
+      - automation-eda-scheduler
+      - automation-eda-daphne
+      - automation-eda-web
+      - automation-eda-api
+    worker_service_pattern: "automation-eda-*worker*.service"
+
+  gateway:
+    manage_cmd: "aap-gateway-manage"
+    django_user: "gateway"
+    container_name: "automation-gateway"
+    python_package: "aap-gateway"
+    secret_keys: ["gateway_secret_key"]
+    k8s_secret_name: "{{ ocp_utils_aap_instance_name }}-db-fields-encryption-secret"
+    k8s_secret_field: "secret_key"
+    postgres_secret: "{{ ocp_utils_aap_instance_name }}-gateway-postgres-configuration"
+    podman_secret_name: "gateway_secret_key"
+    admin_password_secret: "admin-password"
+    admin_password_cmd: "update_password --username admin --password"
+    services:
+      - automation-gateway
+      - automation-gateway-proxy
+    has_worker_discovery: false
+    has_custom_configs: false
+    has_db_partitions: false
+    has_hub_content: false
+    has_aap_version: true
+    django_environment: {}
+    django_manage_get_cmd: null
+    ocp_extra_secrets: []
+    multi_resource_keys:
+      - controller
+      - eda
+      - hub
+    static_services: []
+    worker_service_pattern: ""
+
+  hub:
+    manage_cmd: "pulpcore-manager"
+    django_user: "pulp"
+    container_name: "automation-hub-api"
+    python_package: "pulpcore"
+    secret_keys: ["hub_db_fields_encryption_key"]
+    k8s_secret_name: "{{ ocp_utils_aap_instance_name }}-hub-db-fields-encryption"
+    k8s_secret_field: "database_fields.symmetric.key"
+    postgres_secret: "{{ ocp_utils_aap_instance_name }}-hub-postgres-configuration"
+    podman_secret_name: null
+    admin_password_secret: "hub-admin-password"
+    admin_password_cmd: "reset-admin-password -p"
+    services: []
+    has_worker_discovery: true
+    has_custom_configs: false
+    has_db_partitions: false
+    has_hub_content: true
+    has_aap_version: false
+    worker_service_pattern: "automation-hub-worker-*.service"
+    django_environment:
+      DJANGO_SETTINGS_MODULE: "pulpcore.app.settings"
+      PULP_SETTINGS: "/etc/pulp/settings.py"
+    django_manage_get_cmd: 'from dynaconf.cli import main;main(["get", "DATABASES"])'
+    ocp_extra_secrets:
+      - secret_name: "{{ ocp_utils_aap_instance_name }}-hub-secret-key"
+        field: "secret_key"
+        artifact_key: "hub_secret"
+    multi_resource_keys: []
+    static_services:
+      - automation-hub-api
+      - automation-hub-content
+      - automation-hub-web
+    podman_secrets:
+      - name: "hub_secret_key"
+        artifact_key: "hub_secret"
+      - name: "hub_database_fields"
+        artifact_key: "hub_db_fields_encryption_key"

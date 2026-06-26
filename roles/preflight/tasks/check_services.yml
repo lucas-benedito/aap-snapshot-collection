@@ -1,0 +1,109 @@
+---
+# Verify component services/pods are running before proceeding.
+
+- name: Check component services (RPM)
+  when:
+    - aap_platform == 'rpm'
+    - inventory_hostname != 'localhost'
+  block:
+    - name: Gather service facts
+      ansible.builtin.service_facts:
+      become: true
+
+    - name: Verify gateway service is running
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['supervisord.service'] is defined
+          - ansible_facts.services['supervisord.service'].state == 'running'
+        fail_msg: "Gateway supervisor service is not running"
+      when:
+        - groups.get('gateway_groups', []) | length > 0
+        - inventory_hostname in groups.get('gateway_groups', [])
+
+    - name: Verify controller service is running
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['supervisord.service'] is defined
+          - ansible_facts.services['supervisord.service'].state == 'running'
+        fail_msg: "Controller supervisor service is not running"
+      when:
+        - groups.get('controller_groups', []) | length > 0
+        - inventory_hostname in groups.get('controller_groups', [])
+
+    - name: Verify hub service is running
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['pulpcore-api.service'] is defined
+          - ansible_facts.services['pulpcore-api.service'].state == 'running'
+        fail_msg: "Hub service (pulpcore-api) is not running"
+      when:
+        - groups.get('hub_groups', []) | length > 0
+        - inventory_hostname in groups.get('hub_groups', [])
+
+    - name: Verify EDA service is running
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.services['automation-eda-controller.service'] is defined
+          - ansible_facts.services['automation-eda-controller.service'].state == 'running'
+        fail_msg: "EDA service (automation-eda-controller) is not running"
+      when:
+        - groups.get('eda_groups', []) | length > 0
+        - inventory_hostname in groups.get('eda_groups', [])
+
+- name: Check component pods (OCP)
+  when:
+    - aap_platform == 'operator'
+    - _ocp_utils_aap_cr_exists | default(false) | bool
+  block:
+    - name: Check for pods in error state
+      kubernetes.core.k8s_info:
+        kind: Pod
+        namespace: "{{ preflight_ocp_namespace }}"
+        label_selectors:
+          - "app.kubernetes.io/managed-by={{ preflight_aap_instance_name }}"
+      register: _preflight_all_pods
+
+    - name: Assert no pods in CrashLoopBackOff or Error
+      ansible.builtin.assert:
+        that:
+          - _preflight_all_pods.resources
+            | selectattr('status.containerStatuses', 'defined')
+            | map(attribute='status.containerStatuses')
+            | flatten
+            | selectattr('state.waiting', 'defined')
+            | selectattr('state.waiting.reason', 'defined')
+            | selectattr('state.waiting.reason', 'in', ['CrashLoopBackOff', 'Error', 'ImagePullBackOff'])
+            | list | length == 0
+        fail_msg: >-
+          One or more AAP pods are in a failed state.
+          Check pod status in namespace {{ preflight_ocp_namespace }}.
+
+# NOT YET VALIDATED - containerized platform
+- name: Check component services (containerized)
+  when: aap_platform == 'containerized'
+  block:
+    - name: Discover all AAP service units
+      ansible.builtin.find:
+        paths: "{{ ansible_user_dir }}/.config/systemd/user"
+        patterns: "automation-*.service"
+        file_type: any
+      register: _preflight_service_files
+
+    - name: Check each AAP service is active
+      ansible.builtin.systemd:
+        name: "{{ item | basename | regex_replace('\\.service$', '') }}"
+        scope: user
+      register: _preflight_svc_status
+      loop: "{{ _preflight_service_files.files | map(attribute='path') | list }}"
+      loop_control:
+        label: "{{ item | basename }}"
+
+    - name: Assert all services are active
+      ansible.builtin.assert:
+        that:
+          - item.status.ActiveState == 'active'
+        fail_msg: "Service {{ item.item | basename }} is {{ item.status.ActiveState }}"
+      loop: "{{ _preflight_svc_status.results }}"
+      loop_control:
+        label: "{{ item.item | basename }}"
+      when: _preflight_svc_status.results is defined

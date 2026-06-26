@@ -1,0 +1,6 @@
+---
+# - name: Run preflight checks
+#   import_playbook: preflight.yaml
+
+- name: Run database export
+  import_playbook: "{{ aap_platform | default('rpm') }}/db_export.yaml"

@@ -1,0 +1,5 @@
+---
+- name: Remove the artifact build directory
+  ansible.builtin.file:
+    path: "{{ __artifact_build_dir }}"
+    state: absent

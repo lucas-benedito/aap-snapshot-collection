@@ -1,0 +1,7 @@
+---
+- name: Stop Execution Nodes services
+  ansible.builtin.systemd:
+    name: receptor
+    state: stopped
+    scope: user
+  when: aap_platform == 'containerized'

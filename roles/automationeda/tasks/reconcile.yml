@@ -1,0 +1,60 @@
+---
+- name: Load component config
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.operations
+    tasks_from: set_config.yml
+  vars:
+    component_name: "{{ automationeda_component_name }}"
+
+- name: Wait for AAP CR to reach Successful state
+  kubernetes.core.k8s_info:
+    kind: "{{ ocp_utils_aap_cr_kind | default('AnsibleAutomationPlatform') }}"
+    api_version: "{{ ocp_utils_aap_cr_api_version | default('aap.ansible.com/v1alpha1') }}"
+    namespace: "{{ ocp_utils_ocp_namespace }}"
+    name: "{{ ocp_utils_aap_instance_name | default('aap') }}"
+  register: _automationeda_cr_eda_wait
+  until: >-
+    _automationeda_cr_eda_wait.resources | length > 0
+    and (_automationeda_cr_eda_wait.resources[0].status.conditions | default([])
+         | selectattr('type', 'equalto', 'Successful')
+         | selectattr('status', 'equalto', 'True')
+         | list | length > 0)
+  retries: 60
+  delay: 15
+  when: aap_platform == 'operator'
+
+- name: Re-discover EDA pod
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.ocp_utils
+    tasks_from: discover_pod.yml
+  vars:
+    component_name: "{{ automationeda_component_name }}"
+    _discover_label: "EDA API"
+    _discover_selectors:
+      - "app.kubernetes.io/component=eda-api"
+    _discover_pod_fact: "_ocp_utils_eda_pod_name"
+    _discover_container_fact: "_ocp_utils_eda_container_name"
+    _discover_container_name: "eda-api"
+  when: aap_platform == 'operator'
+
+- name: Run EDA resource sync
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.ocp_utils
+    tasks_from: run_manage_command.yml
+  vars:
+    component_name: "{{ automationeda_component_name }}"
+    _manage_label: "eda resource sync"
+    _manage_command: "{{ _operations_current_component.manage_cmd }} resource_sync"
+    _manage_pod_name: "{{ _ocp_utils_eda_pod_name }}"
+    _manage_container_name: "{{ _ocp_utils_eda_container_name | default(_operations_current_component.container_name) }}"
+  when: _ocp_utils_eda_pod_name is defined
+
+- name: Reset EDA admin password to match K8s secret
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.operations
+    tasks_from: reset_admin_password.yml
+  vars:
+    component_name: "{{ automationeda_component_name }}"
+    _reset_pod_name: "{{ _ocp_utils_eda_pod_name | default('') }}"
+    _reset_container_name: "{{ _ocp_utils_eda_container_name | default(_operations_current_component.container_name) }}"
+  when: aap_platform == 'operator'

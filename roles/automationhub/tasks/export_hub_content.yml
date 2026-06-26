@@ -1,0 +1,70 @@
+---
+- name: Hub content export
+  when: automationhub_export_hub_content | default(true) | bool
+  block:
+    - name: Create hub content tarball (RPM)
+      community.general.archive:
+        path: "{{ automationhub_pulp_data_dir }}/."
+        dest: "{{ automationhub_content_staging_dir }}/{{ automationhub_content_tar_name }}"
+        format: tar
+        mode: '0644'
+      become: true
+      become_user: pulp
+      when: aap_platform == 'rpm'
+
+    - name: Create hub content tarball (containerized)
+      when: aap_platform == 'containerized'
+      block:
+        - name: Get hub container details
+          containers.podman.podman_container_info:
+            name: automation-hub-api
+          register: _automationhub_container
+
+        - name: Resolve hub data path from container mounts
+          ansible.builtin.set_fact:
+            _automationhub_data_path: >-
+              {{ _automationhub_container.containers[0].Mounts
+                 | selectattr('Destination', 'equalto', '/var/lib/pulp')
+                 | map(attribute='Source') | first }}
+
+        - name: Create hub content tarball from host
+          community.general.archive:
+            path: "{{ _automationhub_data_path }}/media/."
+            dest: "{{ automationhub_content_staging_dir }}/{{ automationhub_content_tar_name }}"
+            format: tar
+            mode: '0640'
+
+    - name: Get hub content tarball checksum
+      ansible.builtin.stat:
+        path: "{{ automationhub_content_staging_dir }}/{{ automationhub_content_tar_name }}"
+        checksum_algorithm: sha256
+      register: _automationhub_content_stat
+
+    - name: Add hub content checksum to tracking
+      ansible.builtin.set_fact:
+        _automationhub_content_exported: true
+        _automationhub_db_checksum: |-
+          {{ _automationhub_content_stat.stat.checksum }}  hub/{{ automationhub_content_tar_name }}
+          {{ _automationhub_db_checksum | default() }}
+      when: _automationhub_content_stat.stat.exists | default(false)
+
+    - name: Propagate hub content flag to localhost
+      ansible.builtin.set_fact:
+        _automationhub_content_exported: true
+      delegate_to: localhost
+      delegate_facts: true
+      when: _automationhub_content_stat.stat.exists | default(false)
+
+    - name: Fetch hub content tarball to artifact build dir
+      ansible.posix.synchronize:
+        mode: pull
+        src: "{{ automationhub_content_staging_dir }}/{{ automationhub_content_tar_name }}"
+        dest: "{{ __artifact_build_dir }}/hub/{{ automationhub_content_tar_name }}"
+      when: _automationhub_content_stat.stat.exists | default(false)
+
+    - name: Clean up remote hub content tarball
+      ansible.builtin.file:
+        path: "{{ automationhub_content_staging_dir }}/{{ automationhub_content_tar_name }}"
+        state: absent
+      become: true
+      when: _automationhub_content_stat.stat.exists | default(false)

@@ -1,0 +1,58 @@
+---
+namespace: ansible
+name: aap_snapshot
+version: 1.0.0
+readme: README.md
+authors:
+  - Ricardo Carrillo Cruz <ricarril@redhat.com>
+  - James Marshall <jamarsha@redhat.com>
+  - Lucas Benedito <lbenedit@redhat.com>
+description: A collection for migrating AAP clusters between installation platforms
+license:
+  - GPL-3.0-or-later
+tags:
+  - ansible
+  - automation_platform
+  - tools
+dependencies:
+  "ansible.posix": ">=1.6.0"
+  "community.postgresql": ">=3.0.0"
+  "containers.podman": ">=1.14.0"
+  "community.general": ">=10.7.0"
+  "kubernetes.core": ">=3.0.0"
+repository: https://github.com/ansible-collections/aap-snapshot-collection
+documentation: https://github.com/ansible-collections/aap-snapshot-collection
+homepage: https://github.com/ansible-collections/aap-snapshot-collection
+issues: https://github.com/ansible-collections/aap-snapshot-collection/issues
+build_ignore:
+  - .agents
+  - .ansible-lint
+  - .black.cfg
+  - .claude
+  - .flake8
+  - .git
+  - .github
+  - .gitignore
+  - .pre-commit-config.yaml
+  - aap_install.log
+  - ansible.cfg
+  - CLAUDE.md
+  - CODE_OF_CONDUCT.md
+  - CODEOWNERS
+  - .yamllint.yml
+  - changelogs/.plugin-cache.yaml
+  - collections
+  - CONTRIBUTING.md
+  - DCO
+  - requirements.yml
+  - samples
+  - SECURITY.md
+  - tests
+  - vendor
+  - "*.tar"
+  - "*.tar.gz"
+  - "*.sha256"
+  - artifact
+  - build
+  - docs
+  - Makefile

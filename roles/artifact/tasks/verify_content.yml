@@ -1,0 +1,13 @@
+---
+- name: Verify the artifact content checksums
+  ansible.builtin.command: 'sha256sum --check sha256sum.txt'
+  args:
+    chdir: "{{ artifact_dir }}/artifact"
+  register: _artifact_verify_content_results
+  ignore_errors: true
+  changed_when: false
+
+- name: Print content checksum results
+  ansible.builtin.debug:
+    msg: "{{ _artifact_verify_content_results.stdout_lines }}"
+  failed_when: _artifact_verify_content_results is failed

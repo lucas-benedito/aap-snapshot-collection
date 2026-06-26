@@ -1,0 +1,22 @@
+---
+- name: Resolve artifact file path
+  ansible.builtin.set_fact:
+    _preflight_artifact_file: "{{ artifact_file | default('aap-snapshot-latest.tar') }}"
+
+- name: Build resolved artifact path
+  ansible.builtin.set_fact:
+    _preflight_resolved_path: >-
+      {{ ((_preflight_artifact_file | dirname) or lookup('env', 'PWD')) ~ '/' ~ (_preflight_artifact_file | basename) }}
+
+- name: Check artifact file exists
+  ansible.builtin.stat:
+    path: "{{ _preflight_resolved_path }}"
+    follow: true
+  register: _preflight_artifact_stat
+
+- name: Assert artifact file exists
+  ansible.builtin.assert:
+    that: _preflight_artifact_stat.stat.exists
+    fail_msg: >-
+      Artifact file not found: {{ _preflight_resolved_path }}.
+      Pass the artifact path with: -e artifact_file=/path/to/artifact.tar

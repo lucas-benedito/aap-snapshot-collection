@@ -1,0 +1,99 @@
+---
+- name: Load component config
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.operations
+    tasks_from: set_config.yml
+  vars:
+    component_name: "{{ automationgateway_component_name }}"
+
+- name: Re-discover gateway pod
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.ocp_utils
+    tasks_from: discover_pod.yml
+  vars:
+    component_name: "{{ automationgateway_component_name }}"
+    _discover_label: "gateway"
+    _discover_selectors:
+      - "app.kubernetes.io/component={{ __ocp_utils_aap_deployment_type }}-gateway"
+    _discover_pod_fact: "_ocp_utils_gateway_pod_name"
+    _discover_container_fact: "_ocp_utils_gateway_container_name"
+    _discover_container_name: "api"
+  when: aap_platform == 'operator'
+
+- name: Run gateway schema migrations
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.ocp_utils
+    tasks_from: run_manage_command.yml
+  vars:
+    component_name: "{{ automationgateway_component_name }}"
+    _manage_label: "gateway migrate"
+    _manage_command: "{{ _operations_current_component.manage_cmd }} migrate"
+    _manage_pod_name: "{{ _ocp_utils_gateway_pod_name | default('') }}"
+    _manage_container_name: "{{ _ocp_utils_gateway_container_name | default(_operations_current_component.container_name) }}"
+
+- name: Reset gateway admin password to match K8s secret
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.operations
+    tasks_from: reset_admin_password.yml
+  vars:
+    component_name: "{{ automationgateway_component_name }}"
+    _reset_pod_name: "{{ _ocp_utils_gateway_pod_name | default('') }}"
+    _reset_container_name: "{{ _ocp_utils_gateway_container_name | default(_operations_current_component.container_name) }}"
+  when: aap_platform == 'operator'
+
+- name: Delete vestigial gateway objects (OCP - includes Route)
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.ocp_utils
+    tasks_from: run_manage_command.yml
+  vars:
+    component_name: "{{ automationgateway_component_name }}"
+    _manage_label: "gateway delete vestigial objects"
+    _manage_command: >-
+      {{ _operations_current_component.manage_cmd }}
+      shell {{ _operations_manage_shell_args | default('') }}
+      -c "{{ _automationgateway_cleanup_ocp_script }}"
+    _manage_pod_name: "{{ _ocp_utils_gateway_pod_name | default('') }}"
+    _manage_container_name: "{{ _ocp_utils_gateway_container_name | default(_operations_current_component.container_name) }}"
+  when: aap_platform == 'operator'
+
+- name: Delete vestigial gateway objects (containerized)
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.ocp_utils
+    tasks_from: run_manage_command.yml
+  vars:
+    component_name: "{{ automationgateway_component_name }}"
+    _manage_label: "gateway delete vestigial objects"
+    _manage_command: >-
+      {{ _operations_current_component.manage_cmd }}
+      shell {{ _operations_manage_shell_args | default('') }}
+      -c "{{ _automationgateway_cleanup_containerized_script }}"
+    _manage_pod_name: "{{ _ocp_utils_gateway_pod_name | default('') }}"
+    _manage_container_name: "{{ _ocp_utils_gateway_container_name | default(_operations_current_component.container_name) }}"
+  when: aap_platform == 'containerized'
+
+- name: Remove resource server secret (OCP)
+  kubernetes.core.k8s:
+    kind: Secret
+    name: "{{ automationgateway_resource_server_secret_name }}"
+    namespace: "{{ ocp_utils_ocp_namespace }}"
+    state: absent
+  when: aap_platform == 'operator'
+
+- name: Find resource server podman secrets (containerized)
+  containers.podman.podman_secret_info:
+  register: _automationgateway_podman_secrets
+  when: aap_platform == 'containerized'
+
+- name: Remove resource server podman secrets (containerized)
+  containers.podman.podman_secret:
+    name: "{{ item.Name }}"
+    state: absent
+  loop: >-
+    {{ _automationgateway_podman_secrets.secrets
+       | default([])
+       | map(attribute='Spec')
+       | selectattr('Name', 'match', '.*resource_server.*')
+       | list }}
+  loop_control:
+    label: "{{ item.Name }}"
+  when: aap_platform == 'containerized'

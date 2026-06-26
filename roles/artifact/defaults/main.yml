@@ -1,0 +1,30 @@
+---
+artifact_collection_version: >-
+  {{
+    ((lookup("file", role_path + "/../../MANIFEST.json", errors="ignore") or "{}") | from_json).get("collection_info", {}).get("version")
+    | default(
+        ((lookup("file", role_path + "/../../galaxy.yml", errors="ignore") or "{}") | from_yaml).get("version"),
+        true
+      )
+    | default("unknown", true)
+  }}
+
+### input variables
+artifact_filename: '{{ __artifact_latest_filename }}'
+artifact_dir: '{{ lookup("env", "PWD") }}'
+
+### export control
+artifact_export_hub_content: true
+artifact_postgresql_db_type: 'managed'
+
+### build variables
+artifact_build_dir: '{{ lookup("env", "PWD") }}/artifact'
+__artifact_build_dir: '{{ artifact_build_dir.rstrip("/") }}'
+artifact_checksum_algo: 'sha256'
+artifact_dest_dir: '{{ lookup("env", "PWD") }}'
+__artifact_dest_dir: '{{ artifact_dest_dir.rstrip("/") }}'
+artifact_prefix: 'aap-snapshot'
+artifact_extension: 'tar'
+__artifact_filename: '{{ artifact_prefix }}-{{ _operations_aap_version }}-{{ artifact_date }}.{{ artifact_extension }}'
+__artifact_latest_filename: '{{ artifact_prefix }}-latest.{{ artifact_extension }}'
+...

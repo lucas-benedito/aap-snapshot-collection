@@ -1,0 +1,7 @@
+---
+- name: Preflight controller
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.operations
+    tasks_from: preflight.yml
+  vars:
+    component_name: "{{ automationcontroller_component_name }}"

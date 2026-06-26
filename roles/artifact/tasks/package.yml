@@ -1,0 +1,82 @@
+---
+- name: Create manifest.yml
+  ansible.builtin.template:
+    dest: '{{ __artifact_build_dir }}/manifest.yml'
+    mode: '0640'
+    src: manifest.yaml.j2
+  run_once: true
+  vars:
+    ansible_become: false
+
+- name: Create secrets.yml
+  ansible.builtin.copy:
+    content: '{{ (_operations_component_secrets | default({}) | combine(_postgresql_db_secrets | default({}))) | to_nice_yaml }}'
+    dest: '{{ __artifact_build_dir }}/secrets.yml'
+    mode: '0600'
+  no_log: "{{ (disable_no_log | default(false) | bool) | ternary(false, true) }}"
+
+- name: Collect database checksums from all hosts
+  ansible.builtin.set_fact:
+    _artifact_all_checksums: >-
+      {{ (groups['all'] | map('extract', hostvars)
+          | selectattr('_postgresql_db_checksum', 'defined')
+          | map(attribute='_postgresql_db_checksum')
+          | list
+          +
+          groups['all'] | map('extract', hostvars)
+          | selectattr('_automationhub_db_checksum', 'defined')
+          | map(attribute='_automationhub_db_checksum')
+          | list)
+         | map('trim') | select | list }}
+  run_once: true
+
+- name: Create file for database checksums
+  ansible.builtin.copy:
+    content: "{{ _artifact_all_checksums | join('\n') }}\n"
+    dest: '{{ __artifact_build_dir }}/sha256sum.txt'
+    mode: '0640'
+  run_once: true
+
+- name: Package the artifact
+  community.general.archive:
+    dest: '{{ __artifact_dest_dir }}/{{ __artifact_filename }}'
+    format: tar
+    mode: '0640'
+    path: '{{ __artifact_build_dir }}'
+  notify: Remove the artifact build directory
+  run_once: true
+  vars:
+    ansible_become: false
+
+- name: Get file checksum
+  ansible.builtin.stat:
+    checksum_algorithm: '{{ artifact_checksum_algo }}'
+    path: '{{ __artifact_dest_dir }}/{{ __artifact_filename }}'
+  register: artifact_file_stat
+
+- name: Create artifact checksum file
+  ansible.builtin.copy:
+    content: '{{ artifact_file_stat.stat.checksum }}  {{ artifact_file_stat.stat.path | ansible.builtin.basename }}'
+    dest: '{{ __artifact_dest_dir }}/{{ __artifact_filename }}.{{ artifact_checksum_algo }}'
+    mode: '0640'
+
+- name: Create symbolic link to the most recent artifact
+  ansible.builtin.file:
+    force: true
+    path: '{{ __artifact_dest_dir }}/{{ __artifact_latest_filename }}'
+    src: '{{ __artifact_dest_dir }}/{{ __artifact_filename }}'
+    state: link
+
+- name: Create artifact checksum file for the latest artifact package
+  ansible.builtin.copy:
+    content: '{{ artifact_file_stat.stat.checksum }}  {{ __artifact_latest_filename }}'
+    dest: '{{ __artifact_dest_dir }}/{{ __artifact_latest_filename }}.{{ artifact_checksum_algo }}'
+    mode: '0640'
+
+- name: Persist artifact path facts for post-package plays
+  ansible.builtin.set_fact:
+    __artifact_dest_dir: '{{ __artifact_dest_dir }}'
+    __artifact_filename: '{{ __artifact_filename }}'
+    __artifact_build_dir: '{{ __artifact_build_dir }}'
+  run_once: true
+...

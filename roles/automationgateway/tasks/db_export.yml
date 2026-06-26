@@ -1,0 +1,7 @@
+---
+- name: Export gateway database
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.operations
+    tasks_from: db_export.yml
+  vars:
+    component_name: "{{ automationgateway_component_name }}"

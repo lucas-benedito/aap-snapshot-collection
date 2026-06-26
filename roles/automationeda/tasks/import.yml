@@ -1,0 +1,7 @@
+---
+- name: Import eda component
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.operations
+    tasks_from: import.yml
+  vars:
+    component_name: "{{ automationeda_component_name }}"

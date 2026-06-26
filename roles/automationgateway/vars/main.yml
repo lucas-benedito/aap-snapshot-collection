@@ -1,0 +1,15 @@
+---
+automationgateway_component_name: gateway
+
+_automationgateway_cleanup_ocp_script: >-
+  from aap_gateway_api.models import HTTPPort, ServiceNode, ServiceCluster, Route;
+  HTTPPort.objects.all().delete();
+  Route.objects.all().delete();
+  ServiceNode.objects.all().delete();
+  ServiceCluster.objects.all().delete()
+
+_automationgateway_cleanup_containerized_script: >-
+  from aap_gateway_api.models import HTTPPort, ServiceNode, ServiceCluster;
+  HTTPPort.objects.all().delete();
+  ServiceNode.objects.all().delete();
+  ServiceCluster.objects.all().delete()

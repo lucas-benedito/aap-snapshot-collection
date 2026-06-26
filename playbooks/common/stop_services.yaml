@@ -1,0 +1,55 @@
+---
+- name: Stop monitoring services
+  hosts: "{{ _stop_monitoring_hosts | default('controller_groups:eda_groups:gateway_groups:hub_groups') }}"
+  gather_facts: false
+  any_errors_fatal: true
+  max_fail_percentage: 0
+  tasks:
+    - name: Stop monitoring
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.pcp
+        tasks_from: stop_service.yml
+
+- name: Stop EDA services
+  hosts: "{{ _stop_eda_hosts | default('eda_groups') }}"
+  gather_facts: false
+  any_errors_fatal: true
+  max_fail_percentage: 0
+  tasks:
+    - name: Stop EDA
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationeda
+        tasks_from: stop_service.yml
+
+- name: Stop Hub services
+  hosts: "{{ _stop_hub_hosts | default('hub_groups') }}"
+  gather_facts: false
+  any_errors_fatal: true
+  max_fail_percentage: 0
+  tasks:
+    - name: Stop Hub
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationhub
+        tasks_from: stop_service.yml
+
+- name: Stop Controller services
+  hosts: "{{ _stop_controller_hosts | default('controller_groups') }}"
+  gather_facts: false
+  any_errors_fatal: true
+  max_fail_percentage: 0
+  tasks:
+    - name: Stop Controller
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationcontroller
+        tasks_from: stop_service.yml
+
+- name: Stop Gateway services
+  hosts: "{{ _stop_gateway_hosts | default('gateway_groups') }}"
+  gather_facts: false
+  any_errors_fatal: true
+  max_fail_percentage: 0
+  tasks:
+    - name: Stop Gateway
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationgateway
+        tasks_from: stop_service.yml

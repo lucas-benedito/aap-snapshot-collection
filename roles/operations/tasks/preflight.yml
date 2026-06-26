@@ -1,0 +1,24 @@
+---
+- name: Set component config
+  ansible.builtin.set_fact:
+    _operations_current_component: "{{ _operations_component_config[component_name] }}"
+
+- name: Get component version
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.operations
+    tasks_from: get_version.yml
+
+- name: Verify component version
+  ansible.builtin.assert:
+    that:
+      - test_version is version(test_version, "eq", strict=true)
+  vars:
+    test_version: "{{ hostvars['localhost']['_' + component_name + '_version'] }}"
+
+- name: Verify AAP version
+  ansible.builtin.assert:
+    that:
+      - test_version is version(test_version, "eq", strict=true)
+  vars:
+    test_version: "{{ hostvars['localhost']['_operations_aap_version'] }}"
+  when: _operations_current_component.has_aap_version | bool

@@ -1,0 +1,93 @@
+---
+- name: Load component config
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.operations
+    tasks_from: set_config.yml
+  vars:
+    component_name: "{{ automationhub_component_name }}"
+
+- name: Re-discover hub pod
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.ocp_utils
+    tasks_from: discover_pod.yml
+  vars:
+    component_name: "{{ automationhub_component_name }}"
+    _discover_label: "hub API"
+    _discover_selectors:
+      - "app.kubernetes.io/name=automationhub-api"
+    _discover_pod_fact: "_ocp_utils_hub_pod_name"
+    _discover_container_fact: "_ocp_utils_hub_container_name"
+    _discover_container_name: "api"
+  when: aap_platform == 'operator'
+
+- name: Run Pulp content repair via hub pod (OCP)
+  when:
+    - aap_platform == 'operator'
+    - _ocp_utils_hub_pod_name is defined
+  block:
+    - name: Run pulpcore-manager repair-artifacts
+      kubernetes.core.k8s_exec:
+        namespace: "{{ ocp_utils_ocp_namespace }}"
+        pod: "{{ _ocp_utils_hub_pod_name }}"
+        container: "{{ _ocp_utils_hub_container_name }}"
+        command: pulpcore-manager repair-artifacts
+      register: _automationhub_repair_pod_result
+      until: _automationhub_repair_pod_result.rc | default(1) == 0
+      retries: 3
+      delay: 30
+      failed_when: false
+      changed_when: false
+
+    - name: Report Pulp repair status (pod)
+      ansible.builtin.debug:
+        msg: >-
+          {{ 'Pulp content repair completed successfully'
+             if (_automationhub_repair_pod_result.rc | default(1)) == 0
+             else 'WARNING: Pulp content repair failed after retries (rc='
+                  ~ (_automationhub_repair_pod_result.rc | default('unknown'))
+                  ~ '). Run manually: oc exec -n ' ~ ocp_utils_ocp_namespace
+                  ~ ' deploy/aap-hub-api -c api -- pulpcore-manager repair-artifacts' }}
+
+- name: Run Pulp content repair via gateway API (non-OCP)
+  when:
+    - aap_platform != 'operator'
+    - ocp_utils_gateway_hostname is defined
+    - ocp_utils_gateway_admin_password is defined
+  block:
+    - name: Run Pulp content repair
+      ansible.builtin.uri:
+        url: "https://{{ ocp_utils_gateway_hostname }}/api/galaxy/pulp/api/v3/repair/"
+        method: POST
+        body_format: json
+        body:
+          verify_checksums: true
+        url_username: "{{ automationgateway_admin_user }}"
+        url_password: "{{ ocp_utils_gateway_admin_password }}"
+        force_basic_auth: true
+        validate_certs: "{{ operations_validate_certs }}"
+        status_code: [200, 202]
+      register: _automationhub_repair_result
+      no_log: "{{ __operations_no_log }}"
+
+    - name: Report Pulp repair status (API)
+      ansible.builtin.debug:
+        msg: "Pulp repair initiated - status {{ _automationhub_repair_result.status }}"
+
+- name: Reset hub admin password to match K8s secret
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.operations
+    tasks_from: reset_admin_password.yml
+  vars:
+    component_name: "{{ automationhub_component_name }}"
+    _reset_pod_name: "{{ _ocp_utils_hub_pod_name | default('') }}"
+    _reset_container_name: "{{ _ocp_utils_hub_container_name | default(_operations_current_component.container_name) }}"
+  when: aap_platform == 'operator'
+
+- name: Skip Pulp content repair
+  ansible.builtin.debug:
+    msg: >-
+      Skipping Pulp content repair - hub pod not discovered or gateway credentials not available.
+      Run content repair manually after hub is fully ready.
+  when:
+    - (aap_platform == 'operator' and _ocp_utils_hub_pod_name is not defined) or
+      (aap_platform != 'operator' and (ocp_utils_gateway_hostname is not defined or ocp_utils_gateway_admin_password is not defined))

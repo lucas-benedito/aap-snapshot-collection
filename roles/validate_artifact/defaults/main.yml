@@ -1,0 +1,4 @@
+---
+validate_artifact_dir: ""
+validate_artifact_supported_schema_versions:
+  - "1.0"

@@ -1,0 +1,55 @@
+---
+- name: Ensure artifact directory is clear before initialized
+  ansible.builtin.file:
+    path: '{{ __artifact_build_dir }}'
+    state: absent
+
+- name: Set artifact timestamp facts
+  ansible.builtin.set_fact:
+    artifact_timestamp: '{{ now(utc=true, fmt="%Y-%m-%dT%H:%M:%SZ") }}'
+    artifact_date: '{{ now(utc=true, fmt="%Y%m%d-%H%M%S") }}'
+
+- name: Initialize artifact directory
+  ansible.builtin.file:
+    path: '{{ __artifact_build_dir }}'
+    state: directory
+    mode: '0750'
+
+- name: Initialize gateway directory
+  ansible.builtin.file:
+    path: '{{ __artifact_build_dir }}/gateway/'
+    state: directory
+    mode: '0750'
+  when: groups.get('gateway_groups', []) | length
+
+- name: Initialize controller directory
+  ansible.builtin.file:
+    path: '{{ __artifact_build_dir }}/controller/'
+    state: directory
+    mode: '0750'
+  when: groups.get('controller_groups', []) | length
+
+- name: Initialize custom_configs for controller
+  ansible.builtin.file:
+    path: '{{ __artifact_build_dir }}/controller/custom_configs/{{ item }}'
+    state: directory
+    mode: '0750'
+  loop: '{{ groups.get("controller_groups", []) }}'
+  when:
+    - groups.get('controller_groups', []) | length
+    - aap_platform | default('rpm') == 'rpm'
+
+- name: Initialize hub directory
+  ansible.builtin.file:
+    path: '{{ __artifact_build_dir }}/hub/'
+    state: directory
+    mode: '0750'
+  when: groups.get('hub_groups', []) | length
+
+- name: Initialize eda directory
+  ansible.builtin.file:
+    path: '{{ __artifact_build_dir }}/eda/'
+    state: directory
+    mode: '0750'
+  when: groups.get('eda_groups', []) | length
+...

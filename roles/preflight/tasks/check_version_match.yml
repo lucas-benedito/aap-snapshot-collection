@@ -1,0 +1,34 @@
+---
+# Validate that the target AAP version matches the artifact's source version.
+# Cross-version DB restores cause migration failures (indexes/tables already
+# exist or are missing). This check prevents wasted deployment time.
+
+- name: Get installed operator version (OCP)
+  when: aap_platform == 'operator'
+  block:
+    - name: Get AAP operator CSV version
+      kubernetes.core.k8s_info:
+        api_version: operators.coreos.com/v1alpha1
+        kind: ClusterServiceVersion
+        namespace: "{{ ocp_utils_operator_namespace }}"
+        label_selectors:
+          - "operators.coreos.com/ansible-automation-platform-operator.{{ ocp_utils_operator_namespace }}"
+      register: _preflight_aap_csv
+
+    - name: Extract operator major.minor version
+      ansible.builtin.set_fact:
+        _preflight_target_aap_version: >-
+          {{ _preflight_aap_csv.resources[0].spec.version | regex_replace('\+.*$', '') | regex_replace('\.\d+$', '') }}
+      when: _preflight_aap_csv.resources | length > 0
+
+    - name: Fail if target AAP version does not match artifact
+      ansible.builtin.fail:
+        msg: >-
+          Target AAP version ({{ _preflight_target_aap_version }}) does not match the
+          artifact source version ({{ artifact_manifest.aap_version }}).
+          Cross-version database restores cause migration failures.
+          Export a new artifact from a {{ _preflight_target_aap_version }} source,
+          or deploy a {{ artifact_manifest.aap_version }} operator on the target.
+      when:
+        - _preflight_target_aap_version is defined
+        - _preflight_target_aap_version != artifact_manifest.aap_version

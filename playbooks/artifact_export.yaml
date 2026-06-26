@@ -1,0 +1,53 @@
+---
+- name: Preflight Tasks
+  hosts: localhost:automationcontroller:automationedacontroller:automationeda:automationgateway:automationhub
+  gather_facts: false
+  any_errors_fatal: true
+  max_fail_percentage: 0
+  environment: "{{ ocp_utils_ocp_environment | default({}) }}"
+  tasks:
+    - name: Set Common Groups
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.common
+        tasks_from: set_groups.yml
+
+    - name: Running Preflight
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.preflight
+        tasks_from: main.yml
+
+- name: Initialize artifact
+  hosts: localhost
+  gather_facts: false
+  any_errors_fatal: true
+  max_fail_percentage: 0
+  tasks:
+    - name: Initialize artifact locally
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.artifact
+        tasks_from: init.yml
+
+- name: Export into artifact
+  hosts: controller_groups:eda_groups:gateway_groups:hub_groups
+  gather_facts: false
+  any_errors_fatal: true
+  max_fail_percentage: 0
+  tasks:
+    - name: Export components into artifact
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.artifact
+        tasks_from: build.yml
+
+- name: Package artifact
+  hosts: localhost
+  gather_facts: false
+  any_errors_fatal: true
+  max_fail_percentage: 0
+  tasks:
+    - name: Package artifact locally
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.artifact
+        tasks_from: package.yml
+
+- name: Validate artifact
+  ansible.builtin.import_playbook: common/validate_artifact.yaml

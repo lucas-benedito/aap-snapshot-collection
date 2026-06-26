@@ -1,0 +1,26 @@
+---
+- name: Get version for controller
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.operations
+    tasks_from: get_version.yml
+  vars:
+    component_name: "{{ automationcontroller_component_name }}"
+
+- name: Export secrets for controller
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.operations
+    tasks_from: get_secret.yml
+  vars:
+    component_name: "{{ automationcontroller_component_name }}"
+
+- name: Export database for controller
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.operations
+    tasks_from: db_export.yml
+  vars:
+    component_name: "{{ automationcontroller_component_name }}"
+    postgresql_export_dest: "{{ __artifact_build_dir }}"
+
+- name: Export controller custom configs
+  ansible.builtin.include_tasks: export_custom_configs.yml
+  when: aap_platform | default('rpm') == 'rpm'
