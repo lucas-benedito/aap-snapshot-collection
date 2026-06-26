@@ -1,0 +1,7 @@
+---
+- name: Stop controller services
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.operations
+    tasks_from: stop_service.yml
+  vars:
+    component_name: "{{ automationcontroller_component_name }}"

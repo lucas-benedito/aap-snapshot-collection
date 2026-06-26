@@ -1,0 +1,24 @@
+---
+- name: Check if AAP CR exists
+  kubernetes.core.k8s_info:
+    kind: "{{ ocp_utils_aap_cr_kind }}"
+    api_version: "{{ ocp_utils_aap_cr_api_version }}"
+    namespace: "{{ ocp_utils_ocp_namespace }}"
+  register: _ocp_utils_aap_cr_check
+
+- name: Set AAP CR existence fact
+  ansible.builtin.set_fact:
+    _ocp_utils_aap_cr_exists: "{{ (_ocp_utils_aap_cr_check.resources | length > 0) }}"
+
+- name: Fail when multiple AAP CRs found in namespace
+  ansible.builtin.fail:
+    msg: >-
+      Found {{ _ocp_utils_aap_cr_check.resources | length }} AAP CRs in namespace '{{ ocp_utils_ocp_namespace }}':
+      {{ _ocp_utils_aap_cr_check.resources | map(attribute='metadata.name') | list | join(', ') }}.
+      Set -e ocp_utils_aap_instance_name=<name> to specify which one to target.
+  when: _ocp_utils_aap_cr_check.resources | length > 1
+
+- name: Set aap_instance_name from discovered CR
+  ansible.builtin.set_fact:
+    ocp_utils_aap_instance_name: "{{ _ocp_utils_aap_cr_check.resources[0].metadata.name }}"
+  when: _ocp_utils_aap_cr_check.resources | length == 1

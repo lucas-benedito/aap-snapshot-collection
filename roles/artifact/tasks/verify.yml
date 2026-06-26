@@ -1,0 +1,38 @@
+---
+- name: Check for the artifact file at the provided location
+  ansible.builtin.stat:
+    path: "{{ artifact_dir }}/{{ artifact_filename }}"
+  register: _artifact_source_file
+
+- name: Verify artifact file exists
+  ansible.builtin.assert:
+    that: _artifact_source_file.stat.exists
+    fail_msg: >-
+      The artifact file at {{ artifact_dir }}/{{ artifact_filename }} does not exist.
+      Ensure artifact_file is set to the absolute path of the artifact.
+
+- name: Check that artifact file checksum exists
+  ansible.builtin.stat:
+    path: "{{ artifact_dir }}/{{ artifact_filename }}.{{ artifact_checksum_algo }}"
+  register: _artifact_source_checksum_file
+
+- name: Verify artifact checksum file exists
+  ansible.builtin.assert:
+    that: _artifact_source_checksum_file.stat.exists
+    fail_msg: >-
+      The artifact checksum file
+      {{ artifact_dir }}/{{ artifact_filename }}.{{ artifact_checksum_algo }}
+      either does not exist or is not located in the same directory.
+
+- name: Verify the artifact checksum
+  ansible.builtin.command: 'sha256sum --check {{ artifact_filename }}.{{ artifact_checksum_algo }}'
+  args:
+    chdir: "{{ artifact_dir }}"
+  register: _artifact_verify_results
+  ignore_errors: true
+  changed_when: false
+
+- name: Print checksum results
+  ansible.builtin.debug:
+    msg: "{{ _artifact_verify_results.stdout }}"
+  failed_when: _artifact_verify_results is failed

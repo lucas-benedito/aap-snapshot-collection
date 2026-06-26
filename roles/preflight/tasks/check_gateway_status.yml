@@ -1,0 +1,116 @@
+---
+# Query the gateway /api/gateway/v1/status/ endpoint and verify all services are healthy.
+# For RPM/containerized: requires admin_password or automationgateway_admin_password from
+# the installer inventory. Skipped gracefully if credentials are not available.
+
+- name: Check gateway status API (RPM/containerized)
+  when:
+    - aap_platform in ['rpm', 'containerized']
+    - groups.get('gateway_groups', []) | length > 0
+    - inventory_hostname == groups['gateway_groups'][0]
+    - _gateway_admin_password | default('') | length > 0
+  vars:
+    _gateway_admin_password: >-
+      {{ automationgateway_admin_password | default(admin_password | default('')) }}
+  block:
+    - name: Query gateway status endpoint
+      ansible.builtin.uri:
+        url: "https://{{ inventory_hostname }}/api/gateway/v1/status/"
+        validate_certs: "{{ operations_validate_certs | default(false) }}"
+        method: GET
+        url_username: admin
+        url_password: "{{ _gateway_admin_password }}"
+        force_basic_auth: true
+        status_code: 200
+        return_content: true
+      register: _preflight_gateway_status
+      failed_when: false
+
+    - name: Assert gateway status API is reachable
+      ansible.builtin.assert:
+        that:
+          - _preflight_gateway_status.status == 200
+        fail_msg: >-
+          Gateway status API returned HTTP {{ _preflight_gateway_status.status | default('unreachable') }}.
+          The gateway may not be fully initialized.
+
+    - name: Assert overall gateway status is healthy
+      ansible.builtin.assert:
+        that:
+          - _preflight_gateway_status.json.status == 'good'
+        fail_msg: >-
+          Gateway reports overall status '{{ _preflight_gateway_status.json.status }}'.
+          Service details: {{ _preflight_gateway_status.json.services | default([]) | to_nice_json }}
+      when: _preflight_gateway_status.status == 200
+
+    - name: Assert each backend service is healthy
+      ansible.builtin.assert:
+        that:
+          - item.status == 'good'
+        fail_msg: >-
+          Service '{{ item.service_name }}' reports status '{{ item.status }}'
+      loop: "{{ _preflight_gateway_status.json.services | default([]) }}"
+      loop_control:
+        label: "{{ item.service_name }}"
+      when: _preflight_gateway_status.status == 200
+
+- name: Skip gateway status API check (no credentials)
+  ansible.builtin.debug:
+    msg: >-
+      Skipping gateway status API check - no admin credentials provided.
+      Pass the installer inventory or set admin_password to enable this check.
+  when:
+    - aap_platform in ['rpm', 'containerized']
+    - groups.get('gateway_groups', []) | length > 0
+    - inventory_hostname == groups['gateway_groups'][0]
+    - (automationgateway_admin_password | default(admin_password | default(''))) | length == 0
+
+- name: Check gateway status API (OCP)
+  when:
+    - aap_platform == 'operator'
+    - _ocp_utils_gateway_pod_name is defined
+  block:
+    - name: Query gateway status endpoint via pod
+      kubernetes.core.k8s_exec:
+        namespace: "{{ preflight_ocp_namespace }}"
+        pod: "{{ _ocp_utils_gateway_pod_name }}"
+        container: "{{ _ocp_utils_gateway_container_name }}"
+        command: >-
+          curl -sk https://localhost:8443/api/gateway/v1/status/
+      changed_when: false
+      failed_when: false
+      register: _preflight_gateway_status_ocp
+
+    - name: Warn if gateway status endpoint is not reachable
+      ansible.builtin.debug:
+        msg: >-
+          Gateway status endpoint is not reachable (rc={{ _preflight_gateway_status_ocp.rc }}).
+          This is expected on a fresh deployment that is still initializing.
+      when: _preflight_gateway_status_ocp.rc != 0
+
+    - name: Parse gateway status response
+      ansible.builtin.set_fact:
+        _preflight_gateway_status_json: "{{ _preflight_gateway_status_ocp.stdout | from_json }}"
+      when:
+        - _preflight_gateway_status_ocp.rc == 0
+        - _preflight_gateway_status_ocp.stdout | length > 0
+
+    - name: Assert overall gateway status is healthy (OCP)
+      ansible.builtin.assert:
+        that:
+          - _preflight_gateway_status_json.status == 'good'
+        fail_msg: >-
+          Gateway reports overall status '{{ _preflight_gateway_status_json.status }}'.
+          Service details: {{ _preflight_gateway_status_json.services | default([]) | to_nice_json }}
+      when: _preflight_gateway_status_json is defined
+
+    - name: Assert each backend service is healthy (OCP)
+      ansible.builtin.assert:
+        that:
+          - item.status == 'good'
+        fail_msg: >-
+          Service '{{ item.service_name }}' reports status '{{ item.status }}'
+      loop: "{{ _preflight_gateway_status_json.services | default([]) }}"
+      loop_control:
+        label: "{{ item.service_name }}"
+      when: _preflight_gateway_status_json is defined

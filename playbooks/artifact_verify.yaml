@@ -1,0 +1,35 @@
+---
+- name: Verify artifact
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  vars:
+    _artifact_path: "{{ artifact_file | default('aap-snapshot-latest.tar') }}"
+    artifact_filename: "{{ _artifact_path | basename }}"
+    artifact_dir: "{{ _artifact_path | dirname or lookup('env', 'PWD') }}"
+  tasks:
+    - name: Verify artifact package checksum
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.artifact
+        tasks_from: verify.yml
+
+    - name: Temporarily unpack artifact package
+      ansible.builtin.unarchive:
+        dest: '{{ artifact_dir }}'
+        src: '{{ artifact_dir }}/{{ artifact_filename }}'
+
+    - name: Validate artifact contents
+      ansible.aap_snapshot.validate_migration_artifact:
+        artifact_dir: '{{ artifact_dir }}/artifact'
+      register: _validation
+
+    - name: Print validation report
+      ansible.builtin.debug:
+        msg: '{{ _validation.report }}'
+
+    - name: Remove temporary unpacked artifact package
+      ansible.builtin.file:
+        path: '{{ artifact_dir }}/artifact'
+        state: absent
+...

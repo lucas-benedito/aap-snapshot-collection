@@ -1,0 +1,98 @@
+---
+- name: Containerized database import
+  when: aap_platform == 'containerized'
+  block:
+    - name: "Grant CREATEDB to user {{ postgresql_restore_user }}"
+      community.postgresql.postgresql_user:
+        login_host: '{{ postgresql_restore_host }}'
+        login_password: '{{ postgresql_restore_admin_password }}'
+        login_port: '{{ postgresql_restore_port }}'
+        login_user: '{{ postgresql_restore_admin_user }}'
+        name: '{{ postgresql_restore_user }}'
+        role_attr_flags: CREATEDB
+      no_log: "{{ (disable_no_log | default(false) | bool) | ternary(false, true) }}"
+
+    - name: "Restore database for {{ postgresql_component_name }}"
+      community.postgresql.postgresql_db:
+        login_host: '{{ postgresql_restore_host }}'
+        login_password: '{{ postgresql_restore_password }}'
+        login_port: '{{ postgresql_restore_port }}'
+        login_user: '{{ postgresql_restore_user }}'
+        name: template1
+        state: restore
+        target: '{{ postgresql_restore_source }}'
+        target_opts: '--create --clean --if-exists'
+      no_log: "{{ (disable_no_log | default(false) | bool) | ternary(false, true) }}"
+      async: '{{ postgresql_restore_timeout }}'
+      poll: 30
+  always:
+    - name: "Revoke CREATEDB from user {{ postgresql_restore_user }}"
+      community.postgresql.postgresql_user:
+        login_host: '{{ postgresql_restore_host }}'
+        login_password: '{{ postgresql_restore_admin_password }}'
+        login_port: '{{ postgresql_restore_port }}'
+        login_user: '{{ postgresql_restore_admin_user }}'
+        name: '{{ postgresql_restore_user }}'
+        role_attr_flags: NOCREATEDB
+      no_log: "{{ (disable_no_log | default(false) | bool) | ternary(false, true) }}"
+
+- name: OCP database import
+  when: aap_platform == 'operator'
+  block:
+    - name: Find PostgreSQL pod
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.ocp_utils
+        tasks_from: find_pod.yml
+      vars:
+        _ocp_pod_label: '{{ ocp_utils_postgres_statefulset }}-0'
+        _ocp_pod_label_key: 'statefulset.kubernetes.io/pod-name'
+        _ocp_pod_fact: '_pg_pod_name'
+
+    - name: "Grant CREATEDB to user {{ postgresql_restore_user }}"
+      kubernetes.core.k8s_exec:
+        namespace: '{{ ocp_utils_ocp_namespace }}'
+        pod: '{{ _pg_pod_name }}'
+        container: postgres
+        command: >-
+          sh -c 'PGPASSWORD="{{ postgresql_restore_admin_password }}"
+          psql -h {{ postgresql_restore_host }}
+          -p {{ postgresql_restore_port }}
+          -U {{ postgresql_restore_admin_user }}
+          -c "ALTER USER {{ postgresql_restore_user }} WITH CREATEDB;"'
+      failed_when: _postgresql_grant_result.rc != 0
+      no_log: "{{ (disable_no_log | default(false) | bool) | ternary(false, true) }}"
+      register: _postgresql_grant_result
+
+    - name: "Restore database for {{ postgresql_component_name }}"
+      kubernetes.core.k8s_exec:
+        namespace: '{{ ocp_utils_ocp_namespace }}'
+        pod: '{{ ocp_utils_temp_pod_name }}'
+        container: postgres
+        command: >-
+          sh -c 'PGPASSWORD="{{ postgresql_restore_password }}"
+          pg_restore --clean --if-exists --no-owner
+          -h {{ postgresql_restore_host }}
+          -p {{ postgresql_restore_port }}
+          -U {{ postgresql_restore_user }}
+          -d {{ postgresql_restore_dbname }}
+          /tmp/migration/artifact/{{ postgresql_component_name }}/{{ postgresql_component_name }}.pgc'
+      failed_when: _postgresql_restore_result.rc != 0 and 'FATAL' in (_postgresql_restore_result.stderr | default(''))
+      no_log: "{{ (disable_no_log | default(false) | bool) | ternary(false, true) }}"
+      register: _postgresql_restore_result
+  always:
+    - name: "Revoke CREATEDB from user {{ postgresql_restore_user }}"
+      kubernetes.core.k8s_exec:
+        namespace: '{{ ocp_utils_ocp_namespace }}'
+        pod: '{{ _pg_pod_name }}'
+        container: postgres
+        command: >-
+          sh -c 'PGPASSWORD="{{ postgresql_restore_admin_password }}"
+          psql -h {{ postgresql_restore_host }}
+          -p {{ postgresql_restore_port }}
+          -U {{ postgresql_restore_admin_user }}
+          -c "ALTER USER {{ postgresql_restore_user }} NOCREATEDB;"'
+      failed_when: _postgresql_revoke_result.rc != 0
+      no_log: "{{ (disable_no_log | default(false) | bool) | ternary(false, true) }}"
+      register: _postgresql_revoke_result
+      when: _pg_pod_name is defined
+...

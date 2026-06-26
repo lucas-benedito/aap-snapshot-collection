@@ -1,0 +1,15 @@
+---
+- name: Assert aap_platform is defined
+  ansible.builtin.assert:
+    that:
+      - aap_platform is defined
+      - aap_platform in ['containerized', 'rpm', 'operator']
+
+- name: Assert gateway group is defined
+  ansible.builtin.assert:
+    that:
+      - groups.get('gateway_groups', []) | length > 0
+    fail_msg: >-
+      Gateway is required for migration. No hosts found in gateway_groups.
+      Ensure your inventory defines a gateway_groups group with at least one host.
+  when: aap_platform != 'operator'

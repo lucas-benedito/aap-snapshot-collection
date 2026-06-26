@@ -1,0 +1,16 @@
+---
+- name: Verify artifact package
+  ansible.builtin.include_tasks: verify.yml
+
+- name: Temporarily unpack artifact package
+  ansible.builtin.unarchive:
+    src: "{{ artifact_dir }}/{{ artifact_filename }}"
+    dest: "{{ artifact_dir }}"
+
+- name: Verify artifact contents
+  ansible.builtin.include_tasks: verify_content.yml
+
+- name: Remove temporary unpacked artifact package
+  ansible.builtin.file:
+    path: "{{ artifact_dir }}/artifact"
+    state: absent

@@ -1,0 +1,36 @@
+---
+- name: Create universal controller group
+  ansible.builtin.add_host:
+    hostname: "{{ item }}"
+    groups: controller_groups
+  when:
+    - groups.get('automationcontroller', []) | length > 0
+    - item in groups.get('automationcontroller', [])
+  loop: "{{ ansible_play_hosts }}"
+
+- name: Create universal EDA group
+  ansible.builtin.add_host:
+    hostname: "{{ item }}"
+    groups: eda_groups
+  when:
+    - groups.get('automationedacontroller', []) | union(groups.get('automationeda', [])) | length > 0
+    - item in groups.get('automationedacontroller', []) | union(groups.get('automationeda', []))
+  loop: "{{ ansible_play_hosts }}"
+
+- name: Create universal gateway group
+  ansible.builtin.add_host:
+    hostname: "{{ item }}"
+    groups: gateway_groups
+  when:
+    - groups.get('automationgateway', []) | length > 0
+    - item in groups.get('automationgateway', [])
+  loop: "{{ ansible_play_hosts }}"
+
+- name: Create universal hub group
+  ansible.builtin.add_host:
+    hostname: "{{ item }}"
+    groups: hub_groups
+  when:
+    - groups.get('automationhub', []) | length > 0
+    - item in groups.get('automationhub', [])
+  loop: "{{ ansible_play_hosts }}"

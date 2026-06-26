@@ -1,0 +1,64 @@
+---
+- name: Create temporary PVC for migration
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: "{{ ocp_utils_temp_pvc_name }}"
+        namespace: "{{ ocp_utils_ocp_namespace }}"
+      spec:
+        accessModes:
+          - "{{ ocp_utils_temp_pvc_access_mode }}"
+        resources:
+          requests:
+            storage: "{{ ocp_utils_temp_pvc_size }}"
+
+- name: Create temporary PostgreSQL deployment for migration
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: "{{ ocp_utils_temp_deployment_name }}"
+        namespace: "{{ ocp_utils_ocp_namespace }}"
+      spec:
+        replicas: 1
+        selector:
+          matchLabels:
+            app: "{{ ocp_utils_temp_deployment_name }}"
+        template:
+          metadata:
+            labels:
+              app: "{{ ocp_utils_temp_deployment_name }}"
+          spec:
+            containers:
+              - name: postgres
+                image: "{{ ocp_utils_temp_postgres_image }}"
+                command: ["sleep", "infinity"]
+                volumeMounts:
+                  - name: migration-data
+                    mountPath: /tmp/migration
+            volumes:
+              - name: migration-data
+                persistentVolumeClaim:
+                  claimName: "{{ ocp_utils_temp_pvc_name }}"
+
+- name: Wait for temporary pod to be ready
+  kubernetes.core.k8s_info:
+    kind: Pod
+    namespace: "{{ ocp_utils_ocp_namespace }}"
+    label_selectors:
+      - "app={{ ocp_utils_temp_deployment_name }}"
+    field_selectors:
+      - "status.phase=Running"
+  register: _ocp_utils_temp_pods
+  until: _ocp_utils_temp_pods.resources | length > 0
+  retries: "{{ ocp_utils_scale_wait_retries }}"
+  delay: "{{ ocp_utils_scale_wait_delay }}"
+
+- name: Set temporary pod name fact
+  ansible.builtin.set_fact:
+    ocp_utils_temp_pod_name: "{{ _ocp_utils_temp_pods.resources[0].metadata.name }}"

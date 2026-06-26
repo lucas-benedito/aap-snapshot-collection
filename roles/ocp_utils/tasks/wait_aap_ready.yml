@@ -1,0 +1,21 @@
+---
+- name: Wait for AAP reconciliation to succeed
+  kubernetes.core.k8s_info:
+    api_version: "{{ ocp_utils_aap_cr_api_version }}"
+    kind: "{{ ocp_utils_aap_cr_kind }}"
+    name: "{{ ocp_utils_aap_instance_name }}"
+    namespace: "{{ ocp_utils_ocp_namespace }}"
+  register: _ocp_utils_aap_status
+  until: >-
+    _ocp_utils_aap_status.resources | length > 0
+    and _ocp_utils_aap_status.resources[0].status.conditions | default([])
+        | selectattr('type', 'equalto', 'Successful')
+        | selectattr('reason', 'equalto', 'Successful')
+        | list | length > 0
+  retries: "{{ ((aap_ready_timeout | default(2400)) | int / 10) | int }}"
+  delay: 10
+
+- name: Verify component pods are healthy
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.preflight
+    tasks_from: check_services.yml

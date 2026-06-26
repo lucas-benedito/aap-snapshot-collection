@@ -1,0 +1,20 @@
+---
+- name: "Scale gateway operator to {{ ocp_operator_replicas }}"
+  kubernetes.core.k8s_scale:
+    api_version: apps/v1
+    kind: Deployment
+    name: "{{ ocp_utils_gateway_operator_deployment }}"
+    namespace: "{{ ocp_utils_operator_namespace }}"
+    replicas: "{{ ocp_operator_replicas | int }}"
+    wait: "{{ ocp_operator_replicas | int > 0 }}"
+    wait_timeout: "{{ ocp_utils_scale_wait_retries | int * ocp_utils_scale_wait_delay | int }}"
+
+- name: "Scale controller operator to {{ ocp_operator_replicas }}"
+  kubernetes.core.k8s_scale:
+    api_version: apps/v1
+    kind: Deployment
+    name: "{{ ocp_utils_controller_operator_deployment }}"
+    namespace: "{{ ocp_utils_operator_namespace }}"
+    replicas: "{{ ocp_operator_replicas | int }}"
+    wait: "{{ ocp_operator_replicas | int > 0 }}"
+    wait_timeout: "{{ ocp_utils_scale_wait_retries | int * ocp_utils_scale_wait_delay | int }}"

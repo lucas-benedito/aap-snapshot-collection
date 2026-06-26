@@ -1,0 +1,60 @@
+---
+- name: Start Monitoring Services
+  hosts: automationcontroller:automationhub:automationedacontroller:automationgateway
+  gather_facts: false
+  tasks:
+    - name: Start monitoring service
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: started
+      become: true
+      loop:
+        - pmproxy
+        - pmcd
+
+- name: Start EDA Services
+  hosts: automationedacontroller
+  gather_facts: false
+  tasks:
+    - name: Start all EDA services
+      ansible.builtin.command:
+        cmd: "{{ item }}"
+      register: command_output
+      changed_when: command_output.rc != 0
+      become: true
+      loop:
+        - automation-eda-controller-service start
+        - automation-eda-controller-event-stream-service start
+
+- name: Start Hub Services
+  hosts: automationhub
+  gather_facts: false
+  tasks:
+    - name: Start all Hub services
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: started
+      become: true
+      loop:
+        - pulpcore-api
+        - pulpcore-content
+
+- name: Start Controller Services
+  hosts: automationcontroller
+  gather_facts: false
+  tasks:
+    - name: Start Automation Controller services
+      ansible.builtin.command: automation-controller-service start
+      register: command_output
+      changed_when: command_output.rc != 0
+      become: true
+
+- name: Start Gateway Services
+  hosts: automationgateway
+  gather_facts: false
+  tasks:
+    - name: Start Gateway services
+      ansible.builtin.command: automation-gateway-service start
+      register: command_output
+      changed_when: command_output.rc != 0
+      become: true

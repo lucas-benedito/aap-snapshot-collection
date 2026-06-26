@@ -1,0 +1,45 @@
+---
+{% set _parsed_version = _aap_version | ansible.aap_snapshot.parse_aap_version %}
+schema_version: "1.0"
+aap_version: "{{ _parsed_version.major_minor }}"
+aap_version_patch: "{{ _parsed_version.patch }}"
+source_topology: "{{ aap_platform }}"
+export_timestamp: "{{ artifact_timestamp }}"
+exported_by: "ansible.aap_snapshot/{{ artifact_collection_version }}"
+
+components:
+{% if groups.get('controller_groups', []) | length %}
+  - name: controller
+    version: "{{ _controller_version }}"
+    database_name: "{{ _controller_db_name | default('awx') }}"
+    has_custom_configs: {{ (aap_platform | default('rpm') == 'rpm') | lower }}
+{% endif %}
+{% if groups.get('hub_groups', []) | length %}
+  - name: hub
+    version: "{{ _hub_version }}"
+    database_name: "{{ _hub_db_name | default('automationhub') }}"
+    has_custom_configs: false
+    has_content_data: {{ (_hub_content_exported | default(false)) | lower }}
+{% endif %}
+{% if groups.get('gateway_groups', []) | length %}
+  - name: gateway
+    version: "{{ _gateway_version }}"
+    database_name: "{{ _gateway_db_name | default('gateway') }}"
+    has_custom_configs: false
+{% endif %}
+{% if groups.get('eda_groups', []) | length %}
+  - name: eda
+    version: "{{ _eda_version }}"
+    database_name: "{{ _eda_db_name | default('automationedacontroller') }}"
+    has_custom_configs: false
+{% endif %}
+
+database:
+  type: "{{ artifact_postgresql_db_type | default('managed') }}"
+  postgresql_version: "{{ _postgresql_version | default('15') }}"
+
+checksums:
+  algorithm: sha256
+  file: sha256sum.txt
+
+...

@@ -1,0 +1,19 @@
+---
+- name: "Run manage command (OCP) - {{ _manage_label | default(_manage_command) }}"
+  kubernetes.core.k8s_exec:
+    namespace: "{{ ocp_utils_ocp_namespace }}"
+    pod: "{{ _manage_pod_name }}"
+    container: "{{ _manage_container_name | default(omit) }}"
+    command: "{{ _manage_command }}"
+  failed_when: _ocp_utils_manage_result.rc | default(1) != 0
+  register: _ocp_utils_manage_result
+  when: aap_platform == 'operator'
+
+- name: "Run manage command (containerized) - {{ _manage_label | default(_manage_command) }}"
+  containers.podman.podman_container_exec:
+    name: "{{ _manage_container_name }}"
+    command: "{{ _manage_command }}"
+  failed_when: _ocp_utils_manage_result.rc != 0
+  register: _ocp_utils_manage_result
+  when: aap_platform == 'containerized'
+...

@@ -1,0 +1,160 @@
+---
+- name: Set component config
+  ansible.builtin.set_fact:
+    _operations_current_component: "{{ _operations_component_config[component_name] }}"
+
+- name: "Gather version (RPM) for {{ component_name }}"
+  when: aap_platform == 'rpm'
+  block:
+    - name: "Get version for {{ component_name }}"
+      ansible.aap_snapshot.aap_component_info:
+        component: "{{ component_name }}"
+        gather: [version]
+      register: _operations_component_info
+      become: true
+      become_user: "{{ _operations_current_component.django_user }}"
+
+    - name: "Set version variable for {{ component_name }}"
+      ansible.builtin.set_fact:
+        "_{{ component_name }}_version": "{{ _operations_component_info.version }}"
+      delegate_facts: true
+      delegate_to: localhost
+
+    - name: Set AAP version variable
+      ansible.builtin.set_fact:
+        _operations_aap_version: "{{ _operations_component_info.aap_version }}"
+      delegate_facts: true
+      delegate_to: localhost
+      when: _operations_current_component.has_aap_version | bool
+
+- name: "Gather version (OCP) for {{ component_name }}"
+  when: aap_platform == 'operator'
+  block:
+    - name: "Get version via pod for {{ component_name }}"
+      kubernetes.core.k8s_exec:
+        namespace: "{{ ocp_utils_ocp_namespace }}"
+        pod: "{{ _component_pod_name }}"
+        container: "{{ _component_container_name }}"
+        command: >-
+          {{ _operations_current_component.manage_cmd }} shell --no-imports -c
+          "from importlib.metadata import version; print(version('{{ _operations_current_component.python_package }}'))"
+      register: _operations_result
+      changed_when: false
+
+    - name: "Set version variable for {{ component_name }}"
+      ansible.builtin.set_fact:
+        "_{{ component_name }}_version": "{{ _operations_result.stdout_lines | last | trim }}"
+      delegate_facts: true
+      delegate_to: localhost
+
+    - name: Get AAP version via pod
+      kubernetes.core.k8s_exec:
+        namespace: "{{ ocp_utils_ocp_namespace }}"
+        pod: "{{ _component_pod_name }}"
+        container: "{{ _component_container_name }}"
+        command: "cat /etc/ansible-automation-platform/VERSION"
+      register: _operations_aap_version_file
+      changed_when: false
+      failed_when: false
+      when: _operations_current_component.has_aap_version | bool
+
+    - name: Set AAP version from VERSION file
+      ansible.builtin.set_fact:
+        _operations_aap_version: "{{ _operations_aap_version_file.stdout | trim }}"
+      delegate_facts: true
+      delegate_to: localhost
+      when:
+        - _operations_current_component.has_aap_version | bool
+        - _operations_aap_version_file.rc == 0
+
+    - name: Derive AAP version from package version
+      ansible.builtin.set_fact:
+        _operations_aap_version: "{{ hostvars['localhost']['_' + component_name + '_version'].split('.')[:2] | join('.') }}"
+      delegate_facts: true
+      delegate_to: localhost
+      when:
+        - _operations_current_component.has_aap_version | bool
+        - _operations_aap_version_file.rc != 0
+
+    - name: Detect Django major version
+      kubernetes.core.k8s_exec:
+        namespace: "{{ ocp_utils_ocp_namespace }}"
+        pod: "{{ _component_pod_name }}"
+        container: "{{ _component_container_name }}"
+        command: >-
+          {{ _operations_current_component.manage_cmd }} shell --no-imports -c
+          "import django; print(django.VERSION[0])"
+      register: _operations_django_version_result
+      changed_when: false
+      when: _operations_current_component.has_aap_version | bool
+
+    - name: Set manage shell args for Django 5.x compatibility
+      ansible.builtin.set_fact:
+        _operations_manage_shell_args: "{{ '--no-imports' if (_operations_django_version_result.stdout_lines | last | trim | int) >= 5 else '' }}"
+      delegate_facts: true
+      delegate_to: localhost
+      when: _operations_current_component.has_aap_version | bool
+
+- name: "Gather version (containerized) for {{ component_name }}"
+  when: aap_platform == 'containerized'
+  block:
+    - name: "Get version for {{ component_name }}"
+      containers.podman.podman_container_exec:
+        name: "{{ _operations_current_component.container_name }}"
+        command: >-
+          {{ _operations_current_component.manage_cmd }} shell --no-imports -c
+          "from importlib.metadata import version; print(version('{{ _operations_current_component.python_package }}'))"
+      changed_when: false
+      register: _operations_result
+
+    - name: "Set version variable for {{ component_name }}"
+      ansible.builtin.set_fact:
+        "_{{ component_name }}_version": "{{ _operations_result.stdout_lines | last | trim }}"
+      delegate_facts: true
+      delegate_to: localhost
+      when: _operations_result.stdout is defined
+
+    - name: Get AAP version
+      containers.podman.podman_container_exec:
+        name: "{{ _operations_current_component.container_name }}"
+        command: "cat /etc/ansible-automation-platform/VERSION"
+      changed_when: false
+      register: _operations_aap_version_file
+      failed_when: false
+      when: _operations_current_component.has_aap_version | bool
+
+    - name: Set AAP version from VERSION file
+      ansible.builtin.set_fact:
+        _operations_aap_version: "{{ _operations_aap_version_file.stdout | trim }}"
+      delegate_facts: true
+      delegate_to: localhost
+      when:
+        - _operations_current_component.has_aap_version | bool
+        - _operations_aap_version_file.rc == 0
+
+    - name: Derive AAP version from package version
+      ansible.builtin.set_fact:
+        _operations_aap_version: "{{ hostvars['localhost']['_' + component_name + '_version'].split('.')[:2] | join('.') }}"
+      delegate_facts: true
+      delegate_to: localhost
+      when:
+        - _operations_current_component.has_aap_version | bool
+        - _operations_aap_version_file.rc != 0
+        - hostvars['localhost']['_' + component_name + '_version'] is defined
+
+    - name: Detect Django major version
+      containers.podman.podman_container_exec:
+        name: "{{ _operations_current_component.container_name }}"
+        command: >-
+          {{ _operations_current_component.manage_cmd }} shell --no-imports -c
+          "import django; print(django.VERSION[0])"
+      changed_when: false
+      register: _operations_django_version_result
+      when: _operations_current_component.has_aap_version | bool
+
+    - name: Set manage shell args for Django 5.x compatibility
+      ansible.builtin.set_fact:
+        _operations_manage_shell_args: "{{ '--no-imports' if (_operations_django_version_result.stdout_lines | last | trim | int) >= 5 else '' }}"
+      delegate_facts: true
+      delegate_to: localhost
+      when: _operations_current_component.has_aap_version | bool

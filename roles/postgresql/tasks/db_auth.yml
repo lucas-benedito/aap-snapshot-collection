@@ -1,0 +1,93 @@
+---
+- name: RPM - Get DB credentials via module
+  when: aap_platform == 'rpm'
+  block:
+    - name: Get database credentials from component
+      ansible.aap_snapshot.aap_component_info:
+        component: "{{ postgresql_component_name }}"
+        gather: [db_credentials]
+        environment: "{{ postgresql_django_environment | default({}) }}"
+      register: _postgresql_component_db_info
+      no_log: '{{ postgresql_no_log }}'
+
+    - name: Set db settings from module output
+      ansible.builtin.set_fact:
+        postgresql_auth_settings:
+          default:
+            HOST: "{{ _postgresql_component_db_info.db_credentials.host }}"
+            PORT: "{{ _postgresql_component_db_info.db_credentials.port }}"
+            NAME: "{{ _postgresql_component_db_info.db_credentials.name }}"
+            USER: "{{ _postgresql_component_db_info.db_credentials.user }}"
+            PASSWORD: "{{ _postgresql_component_db_info.db_credentials.password }}"
+            OPTIONS: "{{ _postgresql_component_db_info.db_credentials.options | default({}) }}"
+      no_log: '{{ postgresql_no_log }}'
+
+- name: Containerized
+  when: aap_platform == 'containerized'
+  block:
+    - name: Get database settings
+      containers.podman.podman_container_exec:
+        name: '{{ postgresql_container_name }}'
+        command: "{{ postgresql_django_manage_cmd }} shell {{ _operations_manage_shell_args | default('') }} -c '{{ postgresql_django_manage_get_cmd }}'"
+      changed_when: false
+      register: _postgresql_dump_result
+
+    - name: Set db settings
+      ansible.builtin.set_fact:
+        postgresql_auth_settings: "{{ _postgresql_dump_result.stdout | trim }}"
+      no_log: '{{ postgresql_no_log }}'
+
+- name: OCP - Get DB credentials from K8s secret
+  when: aap_platform == 'operator'
+  block:
+    - name: Read DB credentials from OCP secret
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.ocp_utils
+        tasks_from: get_db_credentials.yml
+      vars:
+        ocp_pg_config_secret: "{{ postgresql_ocp_secret | default('aap-' + postgresql_component_name + '-postgres-configuration') }}"
+
+    - name: Set db settings from OCP secret
+      ansible.builtin.set_fact:
+        postgresql_auth_settings:
+          default:
+            HOST: "{{ _ocp_utils_db_host }}"
+            PORT: "{{ _ocp_utils_db_port }}"
+            NAME: "{{ _ocp_utils_db_name }}"
+            USER: "{{ _ocp_utils_db_user }}"
+            PASSWORD: "{{ _ocp_utils_db_password }}"
+            OPTIONS: {}
+      no_log: '{{ postgresql_no_log }}'
+
+- name: Set database name fact for manifest
+  ansible.builtin.set_fact:
+    "_{{ postgresql_component_name }}_db_name": "{{ postgresql_auth_settings.default.NAME }}"
+  delegate_to: localhost
+  delegate_facts: true
+  when: _operations_component_secrets is defined
+
+- name: Add DB connection secrets for {{ postgresql_component_name }}
+  ansible.builtin.set_fact:
+    _postgresql_db_secrets: >-
+      {{ hostvars['localhost']['_postgresql_db_secrets'] | default({}) | combine({
+        postgresql_component_name ~ '_pg_host': postgresql_auth_settings.default.HOST,
+        postgresql_component_name ~ '_pg_port': postgresql_auth_settings.default.PORT | string,
+        postgresql_component_name ~ '_pg_database': postgresql_auth_settings.default.NAME,
+        postgresql_component_name ~ '_pg_username': postgresql_auth_settings.default.USER,
+        postgresql_component_name ~ '_pg_password': postgresql_auth_settings.default.PASSWORD | default('')
+      }) }}
+  delegate_to: localhost
+  delegate_facts: true
+  no_log: '{{ postgresql_no_log }}'
+  when: _operations_component_secrets is defined
+
+- name: Set PostgreSQL environment for cert auth
+  ansible.builtin.set_fact:
+    postgresql_pg_dump_env:
+      PGSSLCERT: "{{ postgresql_auth_settings.default.OPTIONS.sslcert }}"
+      PGSSLKEY: "{{ postgresql_auth_settings.default.OPTIONS.sslkey }}"
+      PGSSLROOTCERT: "{{ postgresql_auth_settings.default.OPTIONS.sslrootcert }}"
+  no_log: '{{ postgresql_no_log }}'
+  when:
+    - postgresql_auth_settings.default.OPTIONS.sslcert is defined
+    - postgresql_auth_settings.default.OPTIONS.sslkey is defined

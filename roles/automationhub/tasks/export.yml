@@ -1,0 +1,26 @@
+---
+- name: Get version for hub
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.operations
+    tasks_from: get_version.yml
+  vars:
+    component_name: "{{ automationhub_component_name }}"
+
+- name: Export secrets for hub
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.operations
+    tasks_from: get_secret.yml
+  vars:
+    component_name: "{{ automationhub_component_name }}"
+
+- name: Export database for hub
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.operations
+    tasks_from: db_export.yml
+  vars:
+    component_name: "{{ automationhub_component_name }}"
+    postgresql_export_dest: "{{ __artifact_build_dir }}"
+
+- name: Export hub content data
+  ansible.builtin.include_tasks: export_hub_content.yml
+  when: automationhub_export_hub_content | default(true) | bool

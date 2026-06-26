@@ -1,0 +1,25 @@
+---
+- name: Extract artifact archive
+  ansible.builtin.unarchive:
+    src: "{{ artifact_dir }}/{{ artifact_filename }}"
+    dest: "{{ artifact_dir }}"
+
+- name: Validate extracted artifact
+  ansible.aap_snapshot.validate_migration_artifact:
+    artifact_dir: "{{ artifact_dir }}/artifact"
+    target_aap_version: "{{ target_aap_version | default(omit) }}"
+  register: _artifact_validation
+
+- name: Print validation report
+  ansible.builtin.debug:
+    msg: "{{ _artifact_validation.report }}"
+
+- name: Load artifact secrets
+  ansible.builtin.include_vars:
+    file: "{{ artifact_dir }}/artifact/secrets.yml"
+    name: artifact_secrets
+
+- name: Load artifact manifest
+  ansible.builtin.include_vars:
+    file: "{{ artifact_dir }}/artifact/manifest.yml"
+    name: artifact_manifest

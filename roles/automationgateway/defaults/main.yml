@@ -1,0 +1,3 @@
+---
+automationgateway_admin_user: "admin"
+automationgateway_resource_server_secret_name: "aap-resource-server"

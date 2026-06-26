@@ -1,0 +1,20 @@
+---
+- name: Pull custom config files from controller nodes
+  ansible.posix.synchronize:
+    mode: pull
+    src: "/etc/tower/conf.d/"
+    dest: "{{ __artifact_build_dir }}/controller/custom_configs/{{ inventory_hostname }}/"
+    rsync_opts:
+      - "--exclude=postgres.py"
+      - "--exclude=channels.py"
+      - "--exclude=caching.py"
+      - "--exclude=cluster_host_id.py"
+      - "--exclude=container_groups.py"
+      - "--exclude=execution_environments.py"
+      - "--exclude=ha.py"
+      - "--exclude=gateway.py"
+      - "--exclude=subscription_usage_model.py"
+      - "--exclude=insights.py"
+      - "--exclude=__pycache__"
+  become: true
+  become_user: "awx"

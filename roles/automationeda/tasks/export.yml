@@ -1,0 +1,22 @@
+---
+- name: Get version for eda
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.operations
+    tasks_from: get_version.yml
+  vars:
+    component_name: "{{ automationeda_component_name }}"
+
+- name: Export secrets for eda
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.operations
+    tasks_from: get_secret.yml
+  vars:
+    component_name: "{{ automationeda_component_name }}"
+
+- name: Export database for eda
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.operations
+    tasks_from: db_export.yml
+  vars:
+    component_name: "{{ automationeda_component_name }}"
+    postgresql_export_dest: "{{ __artifact_build_dir }}"

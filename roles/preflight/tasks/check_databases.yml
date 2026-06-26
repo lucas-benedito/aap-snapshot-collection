@@ -1,0 +1,202 @@
+---
+# Verify PostgreSQL connectivity for each component database.
+
+- name: Check database connectivity (RPM)
+  when: aap_platform == 'rpm'
+  block:
+    - name: Check controller database (RPM)
+      ansible.aap_snapshot.aap_component_info:
+        component: controller
+        gather: [db_credentials]
+      register: _preflight_controller_db_check
+      become: true
+      become_user: awx
+      when:
+        - groups.get('controller_groups', []) | length > 0
+        - inventory_hostname == groups['controller_groups'][0]
+      no_log: "{{ (disable_no_log | default(false) | bool) | ternary(false, true) }}"
+
+    - name: Verify controller database connection (RPM)
+      community.postgresql.postgresql_query:
+        login_host: "{{ _preflight_controller_db_check.db_credentials.host }}"
+        login_port: "{{ _preflight_controller_db_check.db_credentials.port }}"
+        login_user: "{{ _preflight_controller_db_check.db_credentials.user }}"
+        login_password: "{{ _preflight_controller_db_check.db_credentials.password }}"
+        db: "{{ _preflight_controller_db_check.db_credentials.name }}"
+        query: "SHOW server_version"
+      no_log: "{{ (disable_no_log | default(false) | bool) | ternary(false, true) }}"
+      when:
+        - _preflight_controller_db_check is not skipped
+        - _preflight_controller_db_check is succeeded
+
+    - name: Check gateway database (RPM)
+      ansible.aap_snapshot.aap_component_info:
+        component: gateway
+        gather: [db_credentials]
+      register: _preflight_gateway_db_check
+      become: true
+      become_user: gateway
+      when:
+        - groups.get('gateway_groups', []) | length > 0
+        - inventory_hostname == groups['gateway_groups'][0]
+      no_log: "{{ (disable_no_log | default(false) | bool) | ternary(false, true) }}"
+
+    - name: Verify gateway database connection (RPM)
+      community.postgresql.postgresql_query:
+        login_host: "{{ _preflight_gateway_db_check.db_credentials.host }}"
+        login_port: "{{ _preflight_gateway_db_check.db_credentials.port }}"
+        login_user: "{{ _preflight_gateway_db_check.db_credentials.user }}"
+        login_password: "{{ _preflight_gateway_db_check.db_credentials.password }}"
+        db: "{{ _preflight_gateway_db_check.db_credentials.name }}"
+        query: "SHOW server_version"
+      no_log: "{{ (disable_no_log | default(false) | bool) | ternary(false, true) }}"
+      when:
+        - _preflight_gateway_db_check is not skipped
+        - _preflight_gateway_db_check is succeeded
+
+    - name: Check hub database (RPM)
+      ansible.aap_snapshot.aap_component_info:
+        component: hub
+        gather: [db_credentials]
+      register: _preflight_hub_db_check
+      become: true
+      become_user: pulp
+      when:
+        - groups.get('hub_groups', []) | length > 0
+        - inventory_hostname == groups['hub_groups'][0]
+      no_log: "{{ (disable_no_log | default(false) | bool) | ternary(false, true) }}"
+
+    - name: Verify hub database connection (RPM)
+      community.postgresql.postgresql_query:
+        login_host: "{{ _preflight_hub_db_check.db_credentials.host }}"
+        login_port: "{{ _preflight_hub_db_check.db_credentials.port }}"
+        login_user: "{{ _preflight_hub_db_check.db_credentials.user }}"
+        login_password: "{{ _preflight_hub_db_check.db_credentials.password }}"
+        db: "{{ _preflight_hub_db_check.db_credentials.name }}"
+        query: "SHOW server_version"
+      no_log: "{{ (disable_no_log | default(false) | bool) | ternary(false, true) }}"
+      when:
+        - _preflight_hub_db_check is not skipped
+        - _preflight_hub_db_check is succeeded
+
+    - name: Check EDA database (RPM)
+      ansible.aap_snapshot.aap_component_info:
+        component: eda
+        gather: [db_credentials]
+      register: _preflight_eda_db_check
+      become: true
+      become_user: eda
+      when:
+        - groups.get('eda_groups', []) | length > 0
+        - inventory_hostname == groups['eda_groups'][0]
+      no_log: "{{ (disable_no_log | default(false) | bool) | ternary(false, true) }}"
+
+    - name: Verify EDA database connection (RPM)
+      community.postgresql.postgresql_query:
+        login_host: "{{ _preflight_eda_db_check.db_credentials.host }}"
+        login_port: "{{ _preflight_eda_db_check.db_credentials.port }}"
+        login_user: "{{ _preflight_eda_db_check.db_credentials.user }}"
+        login_password: "{{ _preflight_eda_db_check.db_credentials.password }}"
+        db: "{{ _preflight_eda_db_check.db_credentials.name }}"
+        query: "SHOW server_version"
+      no_log: "{{ (disable_no_log | default(false) | bool) | ternary(false, true) }}"
+      when:
+        - _preflight_eda_db_check is not skipped
+        - _preflight_eda_db_check is succeeded
+
+- name: Check database connectivity (OCP)
+  when:
+    - aap_platform == 'operator'
+    - _ocp_utils_aap_cr_exists | default(false) | bool
+  block:
+    - name: Verify gateway database via pod
+      kubernetes.core.k8s_exec:
+        namespace: "{{ preflight_ocp_namespace }}"
+        pod: "{{ _ocp_utils_gateway_pod_name }}"
+        container: "{{ _ocp_utils_gateway_container_name }}"
+        command: >-
+          {{ preflight_gateway_manage_cmd }} check --database default
+      changed_when: false
+      failed_when: _preflight_gw_db_check.rc != 0
+      register: _preflight_gw_db_check
+      when: _ocp_utils_gateway_pod_name is defined
+
+    - name: Verify controller database via pod
+      kubernetes.core.k8s_exec:
+        namespace: "{{ preflight_ocp_namespace }}"
+        pod: "{{ _ocp_utils_controller_pod_name }}"
+        container: "{{ _ocp_utils_controller_container_name }}"
+        command: >-
+          {{ preflight_controller_manage_cmd | default('awx-manage') }} check --database default
+      changed_when: false
+      failed_when: _preflight_ctrl_db_check.rc != 0
+      register: _preflight_ctrl_db_check
+      when: _ocp_utils_controller_pod_name is defined
+
+    - name: Verify hub database via pod
+      kubernetes.core.k8s_exec:
+        namespace: "{{ preflight_ocp_namespace }}"
+        pod: "{{ _ocp_utils_hub_pod_name }}"
+        container: "{{ _ocp_utils_hub_container_name }}"
+        command: >-
+          pulpcore-manager check --database default
+      changed_when: false
+      failed_when: _preflight_hub_db_check_ocp.rc != 0
+      register: _preflight_hub_db_check_ocp
+      when: _ocp_utils_hub_pod_name is defined
+
+    - name: Verify EDA database via pod
+      kubernetes.core.k8s_exec:
+        namespace: "{{ preflight_ocp_namespace }}"
+        pod: "{{ _ocp_utils_eda_pod_name }}"
+        container: "{{ _ocp_utils_eda_container_name }}"
+        command: >-
+          aap-eda-manage check --database default
+      changed_when: false
+      failed_when: _preflight_eda_db_check_ocp.rc != 0
+      register: _preflight_eda_db_check_ocp
+      when: _ocp_utils_eda_pod_name is defined
+
+# NOT YET VALIDATED - containerized platform
+- name: Check database connectivity (containerized)
+  when: aap_platform == 'containerized'
+  block:
+    - name: Verify gateway database (containerized)
+      containers.podman.podman_container_exec:
+        name: automation-gateway
+        command: >-
+          {{ preflight_gateway_manage_cmd }} check --database default
+      changed_when: false
+      when:
+        - groups.get('gateway_groups', []) | length > 0
+        - inventory_hostname == groups['gateway_groups'][0]
+
+    - name: Verify controller database (containerized)
+      containers.podman.podman_container_exec:
+        name: automation-controller-web
+        command: >-
+          awx-manage check --database default
+      changed_when: false
+      when:
+        - groups.get('controller_groups', []) | length > 0
+        - inventory_hostname == groups['controller_groups'][0]
+
+    - name: Verify hub database (containerized)
+      containers.podman.podman_container_exec:
+        name: automation-hub-api
+        command: >-
+          pulpcore-manager check --database default
+      changed_when: false
+      when:
+        - groups.get('hub_groups', []) | length > 0
+        - inventory_hostname == groups['hub_groups'][0]
+
+    - name: Verify EDA database (containerized)
+      containers.podman.podman_container_exec:
+        name: automation-eda-api
+        command: >-
+          aap-eda-manage check --database default
+      changed_when: false
+      when:
+        - groups.get('eda_groups', []) | length > 0
+        - inventory_hostname == groups['eda_groups'][0]

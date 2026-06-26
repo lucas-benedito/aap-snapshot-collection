@@ -1,0 +1,79 @@
+---
+- name: Load component config
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.operations
+    tasks_from: set_config.yml
+  vars:
+    component_name: "{{ automationcontroller_component_name }}"
+
+- name: Re-discover controller pod
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.ocp_utils
+    tasks_from: discover_pod.yml
+  vars:
+    component_name: "{{ automationcontroller_component_name }}"
+    _discover_label: "controller"
+    _discover_selectors:
+      - "app.kubernetes.io/component=automationcontroller"
+      - "app.kubernetes.io/name={{ _controller_cr_name }}-task"
+    _discover_pod_fact: "_ocp_utils_controller_pod_name"
+    _discover_container_fact: "_ocp_utils_controller_container_name"
+    _discover_container_name: "{{ _controller_cr_name }}-task"
+  when:
+    - aap_platform == 'operator'
+    - _controller_cr_name is defined
+
+- name: List controller instances with no recent heartbeat
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.ocp_utils
+    tasks_from: run_manage_command.yml
+  vars:
+    component_name: "{{ automationcontroller_component_name }}"
+    _orphan_script: >-
+      import json;
+      from datetime import timedelta;
+      from django.utils import timezone;
+      from awx.main.models import Instance;
+      cutoff = timezone.now() - timedelta(seconds=600);
+      orphans = list(Instance.objects.filter(
+      last_health_check__lt=cutoff, capacity=0).values_list(
+      'hostname', flat=True));
+      print(json.dumps(orphans))
+    _manage_label: "controller list orphaned instances"
+    _manage_command: >-
+      {{ _operations_current_component.manage_cmd }}
+      shell {{ _operations_manage_shell_args | default('') }}
+      -c "{{ _orphan_script | regex_replace('\n', '') | trim }}"
+    _manage_pod_name: '{{ _ocp_utils_controller_pod_name }}'
+    _manage_container_name: '{{ _ocp_utils_controller_container_name | default(_operations_current_component.container_name) }}'
+  when: _ocp_utils_controller_pod_name is defined
+
+- name: Parse orphaned instance list
+  ansible.builtin.set_fact:
+    _automationcontroller_orphaned_instances: '{{ (_ocp_utils_manage_result.stdout_lines | default([]) | select | last | default("[]")) | from_json }}'
+  when: _ocp_utils_controller_pod_name is defined
+
+- name: Deprovision orphaned instances
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.ocp_utils
+    tasks_from: run_manage_command.yml
+  vars:
+    component_name: "{{ automationcontroller_component_name }}"
+    _manage_label: "controller deprovision instance {{ item }}"
+    _manage_command: '{{ _operations_current_component.manage_cmd }} deprovision_instance --hostname={{ item }}'
+    _manage_pod_name: '{{ _ocp_utils_controller_pod_name }}'
+    _manage_container_name: '{{ _ocp_utils_controller_container_name | default(_operations_current_component.container_name) }}'
+  loop: '{{ _automationcontroller_orphaned_instances }}'
+  when:
+    - _ocp_utils_controller_pod_name is defined
+    - _automationcontroller_orphaned_instances | length > 0
+
+- name: Reset controller admin password to match K8s secret
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.operations
+    tasks_from: reset_admin_password.yml
+  vars:
+    component_name: "{{ automationcontroller_component_name }}"
+    _reset_pod_name: "{{ _ocp_utils_controller_pod_name | default('') }}"
+    _reset_container_name: "{{ _ocp_utils_controller_container_name | default(_operations_current_component.container_name) }}"
+  when: aap_platform == 'operator'

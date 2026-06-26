@@ -1,0 +1,75 @@
+---
+# Validates that an RWX-capable StorageClass exists when Hub is in the
+# artifact and the target is OCP. Without RWX storage, Hub PVCs stay
+# Pending and the deployment fails after 15+ minutes of waiting.
+
+- name: Check if artifact includes Hub
+  ansible.builtin.set_fact:
+    _preflight_artifact_has_hub: >-
+      {{ (artifact_manifest.components | default([]))
+         | selectattr('name', 'equalto', 'hub') | list | length > 0 }}
+
+- name: Skip storage class check if Hub is not in the artifact
+  ansible.builtin.debug:
+    msg: "Hub not in artifact - skipping RWX storage class check"
+  when: not (_preflight_artifact_has_hub | bool)
+
+- name: Validate Hub RWX storage class
+  when:
+    - _preflight_artifact_has_hub | bool
+    - aap_platform == 'operator'
+  block:
+    - name: Check if hub_file_storage_class is explicitly set
+      ansible.builtin.set_fact:
+        _preflight_hub_sc_explicit: "{{ hub_file_storage_class | default('') }}"
+
+    - name: Verify explicit storage class exists
+      kubernetes.core.k8s_info:
+        kind: StorageClass
+        name: "{{ _preflight_hub_sc_explicit }}"
+      register: _preflight_explicit_sc
+      when: _preflight_hub_sc_explicit | length > 0
+
+    - name: Fail if explicit storage class does not exist
+      ansible.builtin.fail:
+        msg: >-
+          hub_file_storage_class is set to '{{ _preflight_hub_sc_explicit }}' but
+          this StorageClass does not exist on the cluster. Create it
+          before running the import, or deploy an NFS provisioner
+          (e.g. helm install nfs-provisioner stable/nfs-server-provisioner).
+      when:
+        - _preflight_hub_sc_explicit | length > 0
+        - _preflight_explicit_sc.resources | default([]) | length == 0
+
+    - name: Look for any RWX-capable StorageClass (when none explicitly set)
+      kubernetes.core.k8s_info:
+        kind: StorageClass
+      register: _preflight_storage_classes
+      when: _preflight_hub_sc_explicit | length == 0
+
+    - name: Check for known RWX storage class names
+      ansible.builtin.set_fact:
+        _preflight_rwx_sc_found: >-
+          {{ _preflight_storage_classes.resources | default([])
+             | selectattr('metadata.name', 'in', preflight_known_rwx_storage_classes)
+             | list | length > 0 }}
+      when: _preflight_hub_sc_explicit | length == 0
+
+    - name: Warn if no known RWX storage class found
+      ansible.builtin.fail:
+        msg: >-
+          Hub requires an RWX (ReadWriteMany) StorageClass for file storage,
+          but no known RWX StorageClass was found on the cluster.
+          Available classes: {{ _preflight_storage_classes.resources | default([]) | map(attribute='metadata.name') | list | join(', ') }}.
+          Either set hub_file_storage_class to an existing RWX class, or
+          deploy an NFS provisioner before running the import.
+      when:
+        - _preflight_hub_sc_explicit | length == 0
+        - not (_preflight_rwx_sc_found | default(false) | bool)
+
+    - name: RWX storage class check passed
+      ansible.builtin.debug:
+        msg: >-
+          {{ 'Using explicit hub_file_storage_class: ' ~ _preflight_hub_sc_explicit
+             if _preflight_hub_sc_explicit | length > 0
+             else 'Found RWX-capable StorageClass on cluster' }}

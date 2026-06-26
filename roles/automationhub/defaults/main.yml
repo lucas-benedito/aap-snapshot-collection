@@ -1,0 +1,5 @@
+---
+automationhub_pulp_data_dir: "/var/lib/pulp/media"
+automationhub_content_tar_name: "hub_content.tar"
+automationhub_content_staging_dir: "/tmp"
+automationhub_export_hub_content: true
