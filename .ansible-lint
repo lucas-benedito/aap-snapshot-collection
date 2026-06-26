@@ -1,9 +1,10 @@
 ---
+profile: production
 exclude_paths:
+  - changelogs
   - .github
   - scripts
-  - tests
+  - docs
+warn_list:
+  - no-log-password
 offline: true
-strict: true
-skip_list:
-  - var-naming[no-role-prefix]
