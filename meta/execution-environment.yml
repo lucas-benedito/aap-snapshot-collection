@@ -1,0 +1,7 @@
+---
+version: 3
+
+dependencies:
+  galaxy: requirements.yml
+  python: ee-requirements.txt
+  system: ee-bindep.txt
