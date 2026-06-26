@@ -206,7 +206,7 @@ def main():
     if not os.path.isdir(artifact_dir):
         module.fail_json(msg=f"Artifact directory does not exist: {artifact_dir}")
 
-    exists, _ = _check_file_exists(artifact_dir, "manifest.yml")
+    exists, _path = _check_file_exists(artifact_dir, "manifest.yml")
     if not exists:
         errors.append("Artifact is missing manifest.yml")
     else:
@@ -225,15 +225,19 @@ def main():
             if target_version:
                 artifact_version = manifest.get("aap_version", "")
                 if artifact_version != target_version:
-                    errors.append(f"Artifact from AAP {artifact_version} but target is " f"AAP {target_version}. Migrate to same version first, " f"then upgrade in place.")
+                    errors.append(
+                        f"Artifact from AAP {artifact_version} but target is "
+                        f"AAP {target_version}. Migrate to same version first, "
+                        f"then upgrade in place."
+                    )
 
-    exists, _ = _check_file_exists(artifact_dir, "secrets.yml")
+    exists, _path = _check_file_exists(artifact_dir, "secrets.yml")
     if not exists:
         errors.append("Artifact is missing secrets.yml")
     else:
         secrets_ok = True
 
-    exists, _ = _check_file_exists(artifact_dir, "sha256sum.txt")
+    exists, _path = _check_file_exists(artifact_dir, "sha256sum.txt")
     if not exists:
         errors.append("Artifact is missing sha256sum.txt")
     else:

@@ -160,6 +160,7 @@ def _get_version(manage_cmd, package_name):
                 capture_output=True,
                 text=True,
                 timeout=30,
+                check=False,
             )
             if result.returncode == 0 and result.stdout.strip():
                 lines = result.stdout.strip().splitlines()
@@ -207,6 +208,7 @@ def _get_db_credentials(manage_cmd, component, environment):
             text=True,
             timeout=30,
             env=env,
+            check=False,
         )
 
         if result.returncode != 0:
@@ -216,6 +218,7 @@ def _get_db_credentials(manage_cmd, component, environment):
                 text=True,
                 timeout=30,
                 env=env,
+                check=False,
             )
 
         if result.returncode != 0:
@@ -279,6 +282,7 @@ def _get_gateway_resource_keys(manage_cmd):
                 capture_output=True,
                 text=True,
                 timeout=30,
+                check=False,
             )
 
             if result.returncode != 0:
@@ -287,6 +291,7 @@ def _get_gateway_resource_keys(manage_cmd):
                     capture_output=True,
                     text=True,
                     timeout=30,
+                    check=False,
                 )
 
             if result.returncode == 0 and result.stdout.strip():
@@ -350,6 +355,7 @@ def main():
                 type="list",
                 elements="str",
                 default=["version", "db_credentials", "secrets"],
+                choices=["version", "db_credentials", "secrets"],
             ),
             manage_cmd=dict(type="str", default=None),
             environment=dict(type="dict", default={}),
