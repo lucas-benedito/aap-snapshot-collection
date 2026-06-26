@@ -1,0 +1,78 @@
+---
+# Stage a collection release:
+# 1. Stamps version into galaxy.yml
+# 2. Generates changelog via antsibull-changelog
+# 3. Commits and pushes to the branch
+# 4. Creates a draft GitHub Release for review
+# When the draft release is published, Zuul builds and publishes the collection.
+name: Stage Collection Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Collection version to release (e.g. 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  stage-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - name: Validate version format
+        run: |
+          if ! echo "${VERSION}" | grep -qP '^\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?$'; then
+            echo "::error::Invalid version format: ${VERSION}"
+            exit 1
+          fi
+
+      - name: Checkout sources
+        uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install 'ansible-core>=2.16,<2.18' 'antsibull-changelog>=0.29,<1.0'
+
+      - name: Set collection version
+        run: |
+          sed -i "s/^version:.*/version: ${VERSION}/" galaxy.yml
+
+      - name: Check for changelog fragments
+        run: |
+          if [ -z "$(ls changelogs/fragments/*.yml changelogs/fragments/*.yaml 2>/dev/null)" ]; then
+            echo "::warning::No changelog fragments found -- release changelog will be empty"
+          fi
+
+      - name: Generate changelog
+        run: antsibull-changelog release --version "${VERSION}"
+
+      - name: Commit changelog and version bump
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add galaxy.yml CHANGELOG.rst changelogs/
+          if git diff --cached --quiet; then
+            echo "No changes to commit -- version may already be set"
+          else
+            git commit -m "Release ${VERSION}"
+            git push origin HEAD:refs/heads/${{ github.ref_name }}
+          fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Create draft GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          target_commitish: ${{ steps.commit.outputs.sha }}
+          name: ansible.aap_snapshot v${{ inputs.version }}
+          draft: true
+          generate_release_notes: true
