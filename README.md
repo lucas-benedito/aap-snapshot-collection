@@ -85,6 +85,13 @@ ansible-playbook ansible.aap_snapshot.artifact_verify \
 | `community.general` | `>=10.7.0` |
 | `kubernetes.core` | `>=3.0.0` |
 
+> **Community dependency disclaimer:** This collection depends on
+> `community.postgresql` and `community.general`, which are community-maintained
+> Ansible collections. Red Hat provides full support for these dependencies when
+> used as part of `ansible.aap_snapshot` through Ansible Automation Platform
+> subscriptions. Red Hat will work toward replacing these community dependencies
+> with certified equivalents as they become available.
+
 ### Platform Requirements
 
 - **RPM export:** SSH access to component hosts, `become` privileges
