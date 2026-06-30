@@ -6,9 +6,9 @@ _operations_component_config:
     container_name: "automation-controller-task"
     python_package: "awx"
     secret_keys: ["controller_secret_key"]
-    k8s_secret_name: "{{ ocp_utils_aap_instance_name }}-controller-secret-key"
+    k8s_secret_name: "{{ operations_aap_instance_name }}-controller-secret-key"
     k8s_secret_field: "secret_key"
-    postgres_secret: "{{ ocp_utils_aap_instance_name }}-controller-postgres-configuration"
+    postgres_secret: "{{ operations_aap_instance_name }}-controller-postgres-configuration"
     podman_secret_name: "controller_secret_key"
     admin_password_secret: "controller-admin-password"
     admin_password_cmd: "update_password --username admin --password"
@@ -35,9 +35,9 @@ _operations_component_config:
     container_name: "automation-eda-api"
     python_package: "aap_eda"
     secret_keys: ["eda_secret_key"]
-    k8s_secret_name: "{{ ocp_utils_aap_instance_name }}-eda-db-fields-encryption-secret"
+    k8s_secret_name: "{{ operations_aap_instance_name }}-eda-db-fields-encryption-secret"
     k8s_secret_field: "secret_key"
-    postgres_secret: "{{ ocp_utils_aap_instance_name }}-eda-postgres-configuration"
+    postgres_secret: "{{ operations_aap_instance_name }}-eda-postgres-configuration"
     podman_secret_name: "eda_secret_key"
     admin_password_secret: "eda-admin-password"
     admin_password_cmd: "update_password -u admin -p"
@@ -64,9 +64,9 @@ _operations_component_config:
     container_name: "automation-gateway"
     python_package: "aap-gateway"
     secret_keys: ["gateway_secret_key"]
-    k8s_secret_name: "{{ ocp_utils_aap_instance_name }}-db-fields-encryption-secret"
+    k8s_secret_name: "{{ operations_aap_instance_name }}-db-fields-encryption-secret"
     k8s_secret_field: "secret_key"
-    postgres_secret: "{{ ocp_utils_aap_instance_name }}-gateway-postgres-configuration"
+    postgres_secret: "{{ operations_aap_instance_name }}-gateway-postgres-configuration"
     podman_secret_name: "gateway_secret_key"
     admin_password_secret: "admin-password"
     admin_password_cmd: "update_password --username admin --password"
@@ -94,9 +94,9 @@ _operations_component_config:
     container_name: "automation-hub-api"
     python_package: "pulpcore"
     secret_keys: ["hub_db_fields_encryption_key"]
-    k8s_secret_name: "{{ ocp_utils_aap_instance_name }}-hub-db-fields-encryption"
+    k8s_secret_name: "{{ operations_aap_instance_name }}-hub-db-fields-encryption"
     k8s_secret_field: "database_fields.symmetric.key"
-    postgres_secret: "{{ ocp_utils_aap_instance_name }}-hub-postgres-configuration"
+    postgres_secret: "{{ operations_aap_instance_name }}-hub-postgres-configuration"
     podman_secret_name: null
     admin_password_secret: "hub-admin-password"
     admin_password_cmd: "reset-admin-password -p"
@@ -112,7 +112,7 @@ _operations_component_config:
       PULP_SETTINGS: "/etc/pulp/settings.py"
     django_manage_get_cmd: 'from dynaconf.cli import main;main(["get", "DATABASES"])'
     ocp_extra_secrets:
-      - secret_name: "{{ ocp_utils_aap_instance_name }}-hub-secret-key"
+      - secret_name: "{{ operations_aap_instance_name }}-hub-secret-key"
         field: "secret_key"
         artifact_key: "hub_secret"
     multi_resource_keys: []
