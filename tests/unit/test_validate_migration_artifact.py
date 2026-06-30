@@ -14,6 +14,7 @@ _mock_ansible = types.ModuleType("ansible")
 _mock_module_utils = types.ModuleType("ansible.module_utils")
 _mock_basic = types.ModuleType("ansible.module_utils.basic")
 _mock_basic.AnsibleModule = type("AnsibleModule", (), {})
+_mock_basic.missing_required_lib = lambda lib, reason=None, url=None: f"Failed to import {lib}"
 _mock_ansible.module_utils = _mock_module_utils
 _mock_module_utils.basic = _mock_basic
 sys.modules["ansible"] = _mock_ansible

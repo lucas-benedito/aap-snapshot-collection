@@ -78,6 +78,7 @@ import hashlib
 import os
 import traceback
 
+YAML_IMP_ERR = None
 try:
     import yaml
 
