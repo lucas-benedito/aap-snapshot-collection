@@ -1,12 +1,13 @@
 ---
 namespace: ansible
 name: aap_snapshot
-version: 1.0.0
+version: 0.0.1
 readme: README.md
 authors:
   - Ricardo Carrillo Cruz <ricarril@redhat.com>
   - James Marshall <jamarsha@redhat.com>
   - Lucas Benedito <lbenedit@redhat.com>
+  - Christian M. Adams <rooftopcellist@gmail.com>
 description: A collection for migrating AAP clusters between installation platforms
 license:
   - GPL-3.0-or-later
