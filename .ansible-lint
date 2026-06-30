@@ -5,6 +5,10 @@ exclude_paths:
   - .github
   - scripts
   - docs
+  - tests/integration
+  - tests/unit
+  # auto-generated directories
+  - extensions/molecule
+  - .ansible
 warn_list:
   - no-log-password
-offline: true

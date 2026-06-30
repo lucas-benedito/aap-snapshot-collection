@@ -1,0 +1,4 @@
+plugins/modules/aap_component_info.py compile-2.7
+plugins/modules/aap_component_info.py import-2.7
+plugins/modules/validate_migration_artifact.py compile-2.7
+plugins/modules/validate_migration_artifact.py import-2.7

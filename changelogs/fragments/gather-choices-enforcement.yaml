@@ -1,0 +1,6 @@
+---
+breaking_changes:
+  - >-
+    aap_component_info - The ``gather`` parameter now enforces
+    ``choices`` validation. Unrecognized values that were previously
+    accepted silently will now produce a validation error.

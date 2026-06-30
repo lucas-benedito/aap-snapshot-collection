@@ -1,0 +1,6 @@
+---
+version: 3
+
+dependencies:
+  python: ee-requirements.txt
+  system: ee-bindep.txt

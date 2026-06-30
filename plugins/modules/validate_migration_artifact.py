@@ -76,9 +76,18 @@ errors:
 
 import hashlib
 import os
+import traceback
 
-import yaml
-from ansible.module_utils.basic import AnsibleModule
+YAML_IMP_ERR = None
+try:
+    import yaml
+
+    HAS_YAML = True
+except ImportError:
+    HAS_YAML = False
+    YAML_IMP_ERR = traceback.format_exc()
+
+from ansible.module_utils.basic import AnsibleModule, missing_required_lib
 
 
 def _check_file_exists(artifact_dir, filename):
@@ -183,6 +192,9 @@ def main():
         supports_check_mode=True,
     )
 
+    if not HAS_YAML:
+        module.fail_json(msg=missing_required_lib("PyYAML"), exception=YAML_IMP_ERR)
+
     artifact_dir = module.params["artifact_dir"]
     supported_versions = module.params["supported_schema_versions"]
     target_version = module.params["target_aap_version"]
@@ -197,7 +209,7 @@ def main():
     if not os.path.isdir(artifact_dir):
         module.fail_json(msg=f"Artifact directory does not exist: {artifact_dir}")
 
-    exists, _ = _check_file_exists(artifact_dir, "manifest.yml")
+    exists, _path = _check_file_exists(artifact_dir, "manifest.yml")
     if not exists:
         errors.append("Artifact is missing manifest.yml")
     else:
@@ -216,15 +228,19 @@ def main():
             if target_version:
                 artifact_version = manifest.get("aap_version", "")
                 if artifact_version != target_version:
-                    errors.append(f"Artifact from AAP {artifact_version} but target is " f"AAP {target_version}. Migrate to same version first, " f"then upgrade in place.")
+                    errors.append(
+                        f"Artifact from AAP {artifact_version} but target is "
+                        f"AAP {target_version}. Migrate to same version first, "
+                        f"then upgrade in place."
+                    )
 
-    exists, _ = _check_file_exists(artifact_dir, "secrets.yml")
+    exists, _path = _check_file_exists(artifact_dir, "secrets.yml")
     if not exists:
         errors.append("Artifact is missing secrets.yml")
     else:
         secrets_ok = True
 
-    exists, _ = _check_file_exists(artifact_dir, "sha256sum.txt")
+    exists, _path = _check_file_exists(artifact_dir, "sha256sum.txt")
     if not exists:
         errors.append("Artifact is missing sha256sum.txt")
     else:

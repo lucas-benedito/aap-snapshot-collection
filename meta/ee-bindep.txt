@@ -1,0 +1,2 @@
+# System packages required by the collection.
+# Format: package-name [platform:expression]
