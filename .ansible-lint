@@ -7,6 +7,7 @@ exclude_paths:
   - docs
   - tests/integration
   - tests/unit
+  # auto-generated directories
   - extensions/molecule
   - .ansible
 warn_list:

@@ -5,6 +5,8 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions: {}
+
 jobs:
   certification:
-    uses: ansible-collections/partner-certification-checker/.github/workflows/certification-reusable.yml@v3.0.0
+    uses: ansible-collections/partner-certification-checker/.github/workflows/certification-reusable.yml@6a7d1fe5159620648295b44222c48789008a9660 # v3.0.0

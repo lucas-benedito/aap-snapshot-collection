@@ -149,15 +149,17 @@ ansible-playbook ansible.aap_snapshot.artifact_verify \
 | `artifact` | No | `aap-snapshot-latest.tar` | Artifact filename |
 | `ocp_namespace` | OCP | `aap` | OpenShift namespace |
 | `aap_instance_name` | OCP | `aap` | AAP CR instance name |
-| `export_hub_content` | No | `true` | Include Pulp content data in artifact |
-| `postgresql_db_type` | No | `managed` | Database topology: `managed` or `external` |
+| `artifact_export_hub_content` | No | `true` | Include Pulp content data in artifact |
+| `artifact_postgresql_db_type` | No | `managed` | Database topology: `managed` or `external` |
 
 See the [variables reference](https://github.com/ansible-collections/aap-snapshot-collection/blob/main/docs/variables.md) for the complete list.
 
 ## Testing
 
 The collection supports RPM, containerized, and OCP operator deployments
-on RHEL 8 and RHEL 9. Run the linter and unit tests with:
+on RHEL 8 and RHEL 9.
+
+Dev dependencies: `pip install pytest pyyaml ansible-lint`
 
 ```bash
 make lint
@@ -185,7 +187,7 @@ help available on the [Ansible Forum](https://forum.ansible.com/).
 
 ## Release Notes
 
-See the [changelog](https://github.com/ansible-collections/aap-snapshot-collection/blob/main/CHANGELOG.rst) for release notes.
+See the [changelog](https://github.com/ansible-collections/aap-snapshot-collection/blob/main/CHANGELOG.md) for release notes.
 
 ## Related Information
 
