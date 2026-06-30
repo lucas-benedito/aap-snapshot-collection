@@ -1,5 +1,5 @@
 ---
-{% set _parsed_version = _aap_version | ansible.aap_snapshot.parse_aap_version %}
+{% set _parsed_version = _operations_aap_version | ansible.aap_snapshot.parse_aap_version %}
 schema_version: "1.0"
 aap_version: "{{ _parsed_version.major_minor }}"
 aap_version_patch: "{{ _parsed_version.patch }}"
@@ -19,7 +19,7 @@ components:
     version: "{{ _hub_version }}"
     database_name: "{{ _hub_db_name | default('automationhub') }}"
     has_custom_configs: false
-    has_content_data: {{ (_hub_content_exported | default(false)) | lower }}
+    has_content_data: {{ (_automationhub_content_exported | default(false)) | lower }}
 {% endif %}
 {% if groups.get('gateway_groups', []) | length %}
   - name: gateway
