@@ -21,7 +21,7 @@ jobs:
     permissions:
       contents: write
     env:
-      VERSION: ${{ inputs.version }}
+      VERSION: ${{ github.event.inputs.version }}
     steps:
       - name: Validate version format
         run: |
@@ -31,10 +31,10 @@ jobs:
           fi
 
       - name: Checkout sources
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
         with:
           python-version: '3.12'
 
@@ -69,10 +69,10 @@ jobs:
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Create draft GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2
         with:
-          tag_name: v${{ inputs.version }}
+          tag_name: v${{ env.VERSION }}
           target_commitish: ${{ steps.commit.outputs.sha }}
-          name: ansible.aap_snapshot v${{ inputs.version }}
+          name: ansible.aap_snapshot v${{ env.VERSION }}
           draft: true
           generate_release_notes: true
