@@ -28,7 +28,7 @@ ansible_collections
 ### Install Dependencies
 
 ```bash
-pip install ansible-core ansible-lint black flake8
+pip install ansible-core ansible-lint black flake8 antsibull-changelog
 ansible-galaxy collection install -r requirements.yml
 ```
 
@@ -62,6 +62,59 @@ pip install pre-commit
 pre-commit install
 pre-commit run --all-files
 ```
+
+## Changelog Fragments
+
+This project uses [antsibull-changelog](https://github.com/ansible-community/antsibull-changelog)
+to generate release notes. Every pull request that changes user-facing behavior
+**must** include a changelog fragment.
+
+### Creating a fragment
+
+Create a YAML file in `changelogs/fragments/` named after your change:
+
+```bash
+# Use a descriptive filename — it is discarded after release
+touch changelogs/fragments/fix-hub-content-export.yaml
+```
+
+Add one or more entries keyed by change type:
+
+```yaml
+---
+bugfixes:
+  - Fix hub content export when tarball path contains spaces.
+```
+
+Available section keys:
+
+| Key | When to use |
+|-----|-------------|
+| `major_changes` | Fundamental changes to the collection |
+| `minor_changes` | New features or enhancements |
+| `breaking_changes` | Changes that break backward compatibility |
+| `deprecated_features` | Features marked for future removal |
+| `removed_features` | Previously deprecated features now removed |
+| `security_fixes` | Fixes for security vulnerabilities |
+| `bugfixes` | Bug fixes |
+| `known_issues` | Known issues in the release |
+
+### Validating fragments
+
+```bash
+antsibull-changelog lint
+```
+
+### How releases work
+
+At release time, a maintainer runs:
+
+```bash
+antsibull-changelog release --version <version>
+```
+
+This collects all fragments into `CHANGELOG.rst`, updates
+`changelogs/changelog.yaml`, and removes the consumed fragment files.
 
 ## Excluding Paths from Collection Build
 

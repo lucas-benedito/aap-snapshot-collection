@@ -1,0 +1,7 @@
+---
+major_changes:
+  - >-
+    Add import workflow for OCP targets with database restore, secret
+    synchronization, operator lifecycle management, temporary migration
+    resources, and post-import reconciliation for all four AAP
+    components.

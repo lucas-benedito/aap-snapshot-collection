@@ -1,0 +1,11 @@
+---
+major_changes:
+  - >-
+    Add full export workflow for RPM deployments with SDP v1.0 artifact
+    format, component export roles for controller, hub (with Pulp
+    content), gateway, and EDA, and standalone artifact verification
+    playbook.
+  - >-
+    Add Python modules ``aap_component_info`` for RPM component discovery
+    and ``validate_migration_artifact`` for artifact validation, and
+    ``parse_aap_version`` filter plugin for version string parsing.
