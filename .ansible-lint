@@ -5,5 +5,9 @@ exclude_paths:
   - .github
   - scripts
   - docs
+  - tests/integration
+  - tests/unit
+  - extensions/molecule
+  - .ansible
 warn_list:
   - no-log-password

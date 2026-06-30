@@ -24,6 +24,7 @@ what is present in the inventory and artifact.
 ## Requirements
 
 - Ansible core >= 2.16.0
+- PyYAML
 
 ### Collection Dependencies
 
