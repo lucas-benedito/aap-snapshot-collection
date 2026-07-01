@@ -25,6 +25,7 @@ what is present in the inventory and artifact.
 
 - Ansible core >= 2.16.0
 - PyYAML
+- kubernetes
 
 ### Collection Dependencies
 
