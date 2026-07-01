@@ -38,7 +38,7 @@
         postgresql_export_dir: "{{ _export_dir }}"
         postgresql_export_dest: "{{ _export_dest }}"
       when:
-        - groups.get('automationcontroller', []) | length
+        - groups.get('automationcontroller', []) | length > 0
         - inventory_hostname in groups.get('automationcontroller', [])
 
     - name: Automation hub DB export
@@ -49,7 +49,7 @@
         postgresql_export_dir: "{{ _export_dir }}"
         postgresql_export_dest: "{{ _export_dest }}"
       when:
-        - groups.get('automationhub', []) | length
+        - groups.get('automationhub', []) | length > 0
         - inventory_hostname in groups.get('automationhub', [])
 
     - name: Automation EDA DB export
@@ -60,7 +60,7 @@
         postgresql_export_dir: "{{ _export_dir }}"
         postgresql_export_dest: "{{ _export_dest }}"
       when:
-        - groups.get('automationedacontroller', []) | length
+        - groups.get('automationedacontroller', []) | length > 0
         - inventory_hostname in groups.get('automationedacontroller', [])
 
     - name: Automation gateway DB export
@@ -71,7 +71,7 @@
         postgresql_export_dir: "{{ _export_dir }}"
         postgresql_export_dest: "{{ _export_dest }}"
       when:
-        - groups.get('automationgateway', []) | length
+        - groups.get('automationgateway', []) | length > 0
         - inventory_hostname in groups.get('automationgateway', [])
 
 - name: Download DB checksum files
