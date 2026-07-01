@@ -8,26 +8,26 @@ export_timestamp: "{{ artifact_timestamp }}"
 exported_by: "ansible.aap_snapshot/{{ artifact_collection_version }}"
 
 components:
-{% if groups.get('controller_groups', []) | length %}
+{% if groups.get('controller_groups', []) | length > 0 %}
   - name: controller
     version: "{{ _controller_version }}"
     database_name: "{{ _controller_db_name | default('awx') }}"
     has_custom_configs: {{ (aap_platform | default('rpm') == 'rpm') | lower }}
 {% endif %}
-{% if groups.get('hub_groups', []) | length %}
+{% if groups.get('hub_groups', []) | length > 0 %}
   - name: hub
     version: "{{ _hub_version }}"
     database_name: "{{ _hub_db_name | default('automationhub') }}"
     has_custom_configs: false
     has_content_data: {{ (_automationhub_content_exported | default(false)) | lower }}
 {% endif %}
-{% if groups.get('gateway_groups', []) | length %}
+{% if groups.get('gateway_groups', []) | length > 0 %}
   - name: gateway
     version: "{{ _gateway_version }}"
     database_name: "{{ _gateway_db_name | default('gateway') }}"
     has_custom_configs: false
 {% endif %}
-{% if groups.get('eda_groups', []) | length %}
+{% if groups.get('eda_groups', []) | length > 0 %}
   - name: eda
     version: "{{ _eda_version }}"
     database_name: "{{ _eda_db_name | default('automationedacontroller') }}"
