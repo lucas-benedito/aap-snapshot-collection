@@ -19,7 +19,7 @@
         kind: Deployment
         namespace: "{{ ocp_utils_ocp_namespace }}"
         label_selectors:
-          - "app.kubernetes.io/managed-by"
+          - "app.kubernetes.io/part-of"
       register: _ocp_utils_idle_deployments
       until: >-
         _ocp_utils_idle_deployments.resources
@@ -33,6 +33,8 @@
       kubernetes.core.k8s_info:
         kind: StatefulSet
         namespace: "{{ ocp_utils_ocp_namespace }}"
+        label_selectors:
+          - "app.kubernetes.io/part-of"
       register: _ocp_utils_idle_statefulsets
       until: >-
         _ocp_utils_idle_statefulsets.resources
