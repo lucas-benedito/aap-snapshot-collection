@@ -58,3 +58,5 @@ releases:
         name: parse_aap_version
         namespace: null
     release_date: '2026-07-01'
+  1.0.1:
+    release_date: '2026-07-01'
