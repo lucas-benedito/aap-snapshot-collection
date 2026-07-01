@@ -11,20 +11,32 @@
       spec:
         idle_aap: "{{ ocp_idle_aap | bool }}"
 
-- name: Wait for AAP pods to stop
+- name: Wait for AAP to idle
   when: ocp_idle_aap | bool
   block:
-    - name: Wait for component pods to terminate
+    - name: Wait for component deployments to scale to zero
       kubernetes.core.k8s_info:
-        kind: Pod
+        kind: Deployment
         namespace: "{{ ocp_utils_ocp_namespace }}"
         label_selectors:
-          - "app.kubernetes.io/managed-by={{ ocp_utils_aap_instance_name }}"
-      register: _ocp_utils_aap_pods
+          - "app.kubernetes.io/managed-by"
+      register: _ocp_utils_idle_deployments
       until: >-
-        _ocp_utils_aap_pods.resources
-        | rejectattr('metadata.name', 'match', '.*postgres.*')
+        _ocp_utils_idle_deployments.resources
         | rejectattr('metadata.name', 'match', '.*operator.*')
+        | selectattr('spec.replicas', 'greaterthan', 0)
+        | list | length == 0
+      retries: "{{ ocp_utils_idle_wait_retries }}"
+      delay: "{{ ocp_utils_idle_wait_delay }}"
+
+    - name: Wait for statefulsets to scale to zero
+      kubernetes.core.k8s_info:
+        kind: StatefulSet
+        namespace: "{{ ocp_utils_ocp_namespace }}"
+      register: _ocp_utils_idle_statefulsets
+      until: >-
+        _ocp_utils_idle_statefulsets.resources
+        | selectattr('spec.replicas', 'greaterthan', 0)
         | list | length == 0
       retries: "{{ ocp_utils_idle_wait_retries }}"
       delay: "{{ ocp_utils_idle_wait_delay }}"
