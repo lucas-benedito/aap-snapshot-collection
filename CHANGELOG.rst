@@ -4,6 +4,29 @@ ansible.aap\_snapshot Release Notes
 
 .. contents:: Topics
 
+v1.0.2
+======
+
+Minor Changes
+-------------
+
+- Skip artifact transfer to temporary pod when the file already exists with a matching checksum.
+
+Breaking Changes / Porting Guide
+--------------------------------
+
+- The ``artifact_file`` variable is now required for import and verify playbooks. It no longer defaults to ``aap-snapshot-latest.tar``.
+
+Bugfixes
+--------
+
+- Cascade idle_deployment false directly to child CRs when un-idling to work around AAP-77947 where the gateway operator fails to propagate it.
+- Reconcile gateway before waiting for other components to clear stale service_nodes that block the gateway operator reconciliation loop.
+- Remove aap-snapshot-latest.tar symlink from export packaging - k8s_cp copies the symlink instead of the file content, breaking imports.
+- Remove statefulset idle wait that caused timeout failures during import - the operator does not scale statefulsets during idle.
+- Resolve symlinks and relative paths to absolute real paths before artifact transfer to prevent dangling links inside the temporary pod.
+- Set database.idle_disabled on the AAP CR before idling to keep postgres running during database import.
+
 v1.0.1
 ======
 
