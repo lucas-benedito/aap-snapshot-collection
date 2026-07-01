@@ -4,6 +4,35 @@ ansible.aap\_snapshot Release Notes
 
 .. contents:: Topics
 
+v1.0.0
+======
+
+Breaking Changes / Porting Guide
+--------------------------------
+
+- Role namespace and instance name variables are now decoupled from ``ocp_utils`` defaults. Use ``-e ocp_namespace=<ns>`` and ``-e aap_instance_name=<name>`` instead of ``-e ocp_utils_ocp_namespace=<ns>`` and ``-e ocp_utils_aap_instance_name=<name>``. The ``ocp_utils_*`` variables still work for the ``ocp_utils`` role itself but no longer propagate to other roles.
+
+Bugfixes
+--------
+
+- Idle wait now checks Deployment and StatefulSet replica counts instead of pod label selectors that matched no pods. The previous ``app.kubernetes.io/managed-by`` value-match selector did not match actual pod labels, causing the wait to pass immediately and database restores to run against live pods with active connections.
+- Idle wait scoped to AAP-managed resources using the ``app.kubernetes.io/part-of`` label selector, preventing false matches against non-AAP workloads in shared namespaces.
+- User-provided extra vars ``ocp_namespace`` and ``aap_instance_name`` are now respected by all roles. Previously, roles hardcoded the namespace to ``aap`` or chained through ``ocp_utils`` defaults that only resolved when ``ocp_utils`` was explicitly included first, silently ignoring ``-e ocp_namespace=custom-ns``.
+
+New Plugins
+-----------
+
+Filter
+~~~~~~
+
+- parse_aap_version - Parse an AAP version string into structured components
+
+New Modules
+-----------
+
+- aap_component_info - Discover AAP component information from RPM installations
+- validate_migration_artifact - Validate an AAP migration artifact
+
 v0.0.1
 ======
 
