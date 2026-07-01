@@ -32,7 +32,7 @@
   block:
     - name: "Get version via pod for {{ component_name }}"
       kubernetes.core.k8s_exec:
-        namespace: "{{ ocp_utils_ocp_namespace }}"
+        namespace: "{{ operations_ocp_namespace }}"
         pod: "{{ _component_pod_name }}"
         container: "{{ _component_container_name }}"
         command: >-
@@ -49,7 +49,7 @@
 
     - name: Get AAP version via pod
       kubernetes.core.k8s_exec:
-        namespace: "{{ ocp_utils_ocp_namespace }}"
+        namespace: "{{ operations_ocp_namespace }}"
         pod: "{{ _component_pod_name }}"
         container: "{{ _component_container_name }}"
         command: "cat /etc/ansible-automation-platform/VERSION"
@@ -78,7 +78,7 @@
 
     - name: Detect Django major version
       kubernetes.core.k8s_exec:
-        namespace: "{{ ocp_utils_ocp_namespace }}"
+        namespace: "{{ operations_ocp_namespace }}"
         pod: "{{ _component_pod_name }}"
         container: "{{ _component_container_name }}"
         command: >-

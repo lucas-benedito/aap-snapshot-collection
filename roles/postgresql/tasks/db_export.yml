@@ -87,7 +87,7 @@
 
     - name: Get PostgreSQL server version via pod
       kubernetes.core.k8s_exec:
-        namespace: "{{ ocp_utils_ocp_namespace }}"
+        namespace: "{{ postgresql_ocp_namespace }}"
         pod: "{{ _pg_pod_name }}"
         container: postgres
         command: >-
@@ -111,7 +111,7 @@
 
     - name: Perform PostgreSQL dump via pod
       kubernetes.core.k8s_exec:
-        namespace: "{{ ocp_utils_ocp_namespace }}"
+        namespace: "{{ postgresql_ocp_namespace }}"
         pod: "{{ _pg_pod_name }}"
         container: postgres
         command: >-
@@ -127,7 +127,7 @@
 
     - name: Copy dump file from pod to localhost
       kubernetes.core.k8s_cp:
-        namespace: "{{ ocp_utils_ocp_namespace }}"
+        namespace: "{{ postgresql_ocp_namespace }}"
         pod: "{{ _pg_pod_name }}"
         container: postgres
         remote_path: "/tmp/{{ postgresql_component_name }}.{{ postgresql_export_extension }}"
@@ -136,7 +136,7 @@
 
     - name: Clean up dump file in pod
       kubernetes.core.k8s_exec:
-        namespace: "{{ ocp_utils_ocp_namespace }}"
+        namespace: "{{ postgresql_ocp_namespace }}"
         pod: "{{ _pg_pod_name }}"
         container: postgres
         command: "rm -f /tmp/{{ postgresql_component_name }}.{{ postgresql_export_extension }}"

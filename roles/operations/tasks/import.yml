@@ -64,7 +64,7 @@
   kubernetes.core.k8s:
     kind: Secret
     name: "{{ _operations_current_component.k8s_secret_name }}"
-    namespace: "{{ ocp_utils_ocp_namespace }}"
+    namespace: "{{ operations_ocp_namespace }}"
     state: patched
     definition:
       data: "{{ {_operations_current_component.k8s_secret_field: artifact_secrets[_operations_current_component.secret_keys[0]]} }}"
@@ -77,7 +77,7 @@
   kubernetes.core.k8s:
     kind: Secret
     name: "{{ item.secret_name }}"
-    namespace: "{{ ocp_utils_ocp_namespace }}"
+    namespace: "{{ operations_ocp_namespace }}"
     state: patched
     definition:
       data: "{{ {item.field: artifact_secrets[item.artifact_key]} }}"

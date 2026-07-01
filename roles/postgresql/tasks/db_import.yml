@@ -50,7 +50,7 @@
 
     - name: "Grant CREATEDB to user {{ postgresql_restore_user }}"
       kubernetes.core.k8s_exec:
-        namespace: '{{ ocp_utils_ocp_namespace }}'
+        namespace: '{{ postgresql_ocp_namespace }}'
         pod: '{{ _pg_pod_name }}'
         container: postgres
         command: >-
@@ -65,7 +65,7 @@
 
     - name: "Restore database for {{ postgresql_component_name }}"
       kubernetes.core.k8s_exec:
-        namespace: '{{ ocp_utils_ocp_namespace }}'
+        namespace: '{{ postgresql_ocp_namespace }}'
         pod: '{{ ocp_utils_temp_pod_name }}'
         container: postgres
         command: >-
@@ -82,7 +82,7 @@
   always:
     - name: "Revoke CREATEDB from user {{ postgresql_restore_user }}"
       kubernetes.core.k8s_exec:
-        namespace: '{{ ocp_utils_ocp_namespace }}'
+        namespace: '{{ postgresql_ocp_namespace }}'
         pod: '{{ _pg_pod_name }}'
         container: postgres
         command: >-
