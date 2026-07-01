@@ -123,9 +123,9 @@
         - name: Wait for gateway pod
           kubernetes.core.k8s_info:
             kind: Pod
-            namespace: "{{ ocp_utils_ocp_namespace }}"
+            namespace: "{{ ocp_namespace | default('aap') }}"
             label_selectors:
-              - "app.kubernetes.io/component={{ ocp_utils_aap_instance_name }}-gateway"
+              - "app.kubernetes.io/component={{ aap_instance_name | default('aap') }}-gateway"
             field_selectors:
               - status.phase=Running
           register: _import_gw_pods
@@ -147,7 +147,7 @@
           kubernetes.core.k8s:
             kind: Secret
             name: "{{ item.secret_name }}"
-            namespace: "{{ ocp_utils_ocp_namespace }}"
+            namespace: "{{ ocp_namespace | default('aap') }}"
             state: patched
             definition:
               data: "{{ {item.field: artifact_secrets[item.artifact_key]} }}"
@@ -160,7 +160,7 @@
         - name: Restart gateway pod to pick up restored encryption secret
           kubernetes.core.k8s:
             kind: Pod
-            namespace: "{{ ocp_utils_ocp_namespace }}"
+            namespace: "{{ ocp_namespace | default('aap') }}"
             name: "{{ _ocp_utils_gateway_pod_name }}"
             state: absent
 
@@ -171,14 +171,14 @@
           vars:
             _discover_label: "gateway"
             _discover_selectors:
-              - "app.kubernetes.io/component={{ ocp_utils_aap_instance_name }}-gateway"
+              - "app.kubernetes.io/component={{ aap_instance_name | default('aap') }}-gateway"
             _discover_pod_fact: "_ocp_utils_gateway_pod_name"
             _discover_container_fact: "_ocp_utils_gateway_container_name"
             _discover_container_name: "api"
 
         - name: Detect Django version for manage shell compatibility
           kubernetes.core.k8s_exec:
-            namespace: "{{ ocp_utils_ocp_namespace }}"
+            namespace: "{{ ocp_namespace | default('aap') }}"
             pod: "{{ _ocp_utils_gateway_pod_name }}"
             container: "{{ _ocp_utils_gateway_container_name }}"
             command: >-
@@ -213,7 +213,7 @@
           kubernetes.core.k8s:
             kind: Secret
             name: "{{ item.secret_name }}"
-            namespace: "{{ ocp_utils_ocp_namespace }}"
+            namespace: "{{ ocp_namespace | default('aap') }}"
             state: patched
             definition:
               data: "{{ {item.field: artifact_secrets[item.artifact_key]} }}"
