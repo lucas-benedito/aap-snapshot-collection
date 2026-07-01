@@ -27,7 +27,7 @@
   block:
     - name: Run pulpcore-manager repair-artifacts
       kubernetes.core.k8s_exec:
-        namespace: "{{ ocp_utils_ocp_namespace }}"
+        namespace: "{{ automationhub_ocp_namespace }}"
         pod: "{{ _ocp_utils_hub_pod_name }}"
         container: "{{ _ocp_utils_hub_container_name }}"
         command: pulpcore-manager repair-artifacts
@@ -45,7 +45,7 @@
              if (_automationhub_repair_pod_result.rc | default(1)) == 0
              else 'WARNING: Pulp content repair failed after retries (rc='
                   ~ (_automationhub_repair_pod_result.rc | default('unknown'))
-                  ~ '). Run manually: oc exec -n ' ~ ocp_utils_ocp_namespace
+                  ~ '). Run manually: oc exec -n ' ~ automationhub_ocp_namespace
                   ~ ' deploy/aap-hub-api -c api -- pulpcore-manager repair-artifacts' }}
 
 - name: Run Pulp content repair via gateway API (non-OCP)

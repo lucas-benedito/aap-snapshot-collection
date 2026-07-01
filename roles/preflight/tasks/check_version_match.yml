@@ -10,9 +10,9 @@
       kubernetes.core.k8s_info:
         api_version: operators.coreos.com/v1alpha1
         kind: ClusterServiceVersion
-        namespace: "{{ ocp_utils_operator_namespace }}"
+        namespace: "{{ preflight_operator_namespace }}"
         label_selectors:
-          - "operators.coreos.com/ansible-automation-platform-operator.{{ ocp_utils_operator_namespace }}"
+          - "operators.coreos.com/ansible-automation-platform-operator.{{ preflight_operator_namespace }}"
       register: _preflight_aap_csv
 
     - name: Extract operator major.minor version

@@ -1,4 +1,7 @@
 ---
+# OCP namespace (read from user-facing var, independent of ocp_utils)
+postgresql_ocp_namespace: "{{ ocp_namespace | default('aap') }}"
+
 # Auth variables
 postgresql_django_manage_get_cmd: "from django.conf import settings; print(settings.DATABASES)"
 

@@ -75,7 +75,7 @@
   kubernetes.core.k8s:
     kind: Secret
     name: "{{ automationgateway_resource_server_secret_name }}"
-    namespace: "{{ ocp_utils_ocp_namespace }}"
+    namespace: "{{ automationgateway_ocp_namespace }}"
     state: absent
   when: aap_platform == 'operator'
 

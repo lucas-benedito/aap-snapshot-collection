@@ -11,9 +11,9 @@ ocp_utils_ocp_environment: >-
      if (aap_platform | default('') == 'operator' and __ocp_utils_resolved_kubeconfig | length > 0)
      else {} }}
 
-ocp_utils_ocp_namespace: "aap"
+ocp_utils_ocp_namespace: "{{ ocp_namespace | default('aap') }}"
 ocp_utils_operator_namespace: "{{ ocp_utils_ocp_namespace }}"
-ocp_utils_aap_instance_name: "aap"
+ocp_utils_aap_instance_name: "{{ aap_instance_name | default('aap') }}"
 ocp_utils_aap_cr_kind: "AnsibleAutomationPlatform"
 ocp_utils_aap_cr_api_version: "aap.ansible.com/v1alpha1"
 
