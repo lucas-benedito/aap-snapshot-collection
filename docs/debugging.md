@@ -31,11 +31,22 @@ Default resource names:
 | Deployment | `aap-snapshot-temp-postgres` |
 | PVC | `aap-snapshot-temp` |
 
-**Clean up when done investigating:**
+**You must delete these resources before re-running the import.** The
+playbook creates the PVC and deployment with `state: present`, so it won't
+fail if they already exist — but the PVC retains stale artifact data from
+the previous run, and the temporary pod may be in an inconsistent state.
+Leaving them in place can cause the re-run to restore from the old artifact
+or fail during transfer.
 
 ```bash
 oc delete deployment aap-snapshot-temp-postgres -n <namespace>
 oc delete pvc aap-snapshot-temp -n <namespace>
+```
+
+Wait for both to be fully removed before re-running:
+
+```bash
+oc get deployment,pvc -n <namespace> | grep aap-snapshot-temp
 ```
 
 **To auto-clean on failure instead**, set `keep_temp_on_failure=false`:
