@@ -66,7 +66,7 @@
   delegate_facts: true
   when: _operations_component_secrets is defined
 
-- name: Add DB connection secrets for {{ postgresql_component_name }}
+- name: Add DB connection secrets
   ansible.builtin.set_fact:
     _postgresql_db_secrets: >-
       {{ hostvars['localhost']['_postgresql_db_secrets'] | default({}) | combine({
