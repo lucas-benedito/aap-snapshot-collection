@@ -135,11 +135,11 @@ If component pods crash after database restore, the most common causes are:
 
 ```bash
 # Gateway
-oc logs -n <namespace> -l app.kubernetes.io/component=<instance-name>-gateway \
+oc logs -n <namespace> -l app.kubernetes.io/component=aap-gateway \
   -c api --tail=50
 
 # Controller
-oc logs -n <namespace> -l app.kubernetes.io/component=<instance-name>-controller \
+oc logs -n <namespace> -l app.kubernetes.io/component=automationcontroller \
   -c <instance-name>-task --tail=50
 ```
 
@@ -175,9 +175,8 @@ sudo rm -rf ./artifact/
 
 ### Database Export Timeouts
 
-Large databases may exceed the default `pg_dump` timeout. The export uses
-async tasks — check the async status file on the remote host if the task
-reports a timeout:
+Large databases may exceed the default `pg_dump` timeout. If the task
+reports a timeout, check the remote host for partial dump files:
 
 ```bash
 ssh <host> "ls -la /tmp/backups/automation-platform/"

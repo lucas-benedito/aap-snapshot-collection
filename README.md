@@ -194,6 +194,7 @@ See the [changelog](https://github.com/ansible-collections/aap-snapshot-collecti
 - [Artifact Format](https://github.com/ansible-collections/aap-snapshot-collection/blob/main/docs/artifact-format.md) - SDP v1.0 artifact specification
 - [Variables](https://github.com/ansible-collections/aap-snapshot-collection/blob/main/docs/variables.md) - complete variable reference
 - [Workflows](https://github.com/ansible-collections/aap-snapshot-collection/blob/main/docs/workflows.md) - step-by-step export, import, and reconcile workflows
+- [Debugging](https://github.com/ansible-collections/aap-snapshot-collection/blob/main/docs/debugging.md) - failure recovery procedures for import and export
 - [Red Hat Ansible Automation Platform Life Cycle](https://access.redhat.com/support/policy/updates/ansible-automation-platform)
 
 ## License
