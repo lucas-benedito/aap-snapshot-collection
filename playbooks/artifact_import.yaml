@@ -199,15 +199,12 @@
             tasks_from: reconcile.yml
 
         # --- Wait for remaining components ---
-        - name: Wait for component pods to be reachable
-          ansible.builtin.include_role:
-            name: ansible.aap_snapshot.ocp_utils
-            tasks_from: wait_for_pods.yml
-
-        - name: Discover component pods for reconcile
+        - name: Wait for and discover component pods for reconcile
           ansible.builtin.include_role:
             name: ansible.aap_snapshot.ocp_utils
             tasks_from: discover_components.yml
+          vars:
+            _wait_for_running: true
 
         - name: Re-apply remaining encryption secrets
           kubernetes.core.k8s:
