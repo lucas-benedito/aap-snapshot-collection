@@ -1,0 +1,3 @@
+---
+bugfixes:
+  - Replace non-existent pulpcore-manager repair-artifacts command with Pulp REST API call for hub content repair.
