@@ -1,0 +1,3 @@
+bugfixes:
+  - Fix meta/execution-environment.yml python and system dependency
+    paths for ansible-builder.

@@ -2,5 +2,5 @@
 version: 3
 
 dependencies:
-  python: ee-requirements.txt
-  system: ee-bindep.txt
+  python: meta/ee-requirements.txt
+  system: meta/ee-bindep.txt
