@@ -14,9 +14,9 @@
       ansible.builtin.include_role:
         name: ansible.aap_snapshot.validate_artifact
       vars:
-        validate_artifact_dir: "{{ __artifact_build_dir }}"
+        validate_artifact_dir: "{{ __artifact_dest_dir }}/{{ __artifact_build_dir | basename }}"
 
     - name: Clean up extracted artifact
       ansible.builtin.file:
-        path: "{{ __artifact_build_dir }}"
+        path: "{{ __artifact_dest_dir }}/{{ __artifact_build_dir | basename }}"
         state: absent

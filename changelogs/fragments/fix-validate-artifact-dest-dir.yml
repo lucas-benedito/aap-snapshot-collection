@@ -1,0 +1,5 @@
+bugfixes:
+  - Fix post-export artifact validation failing when ``artifact_dest_dir`` differs from the default.
+    The validate play now correctly resolves the extracted artifact path relative to ``artifact_dest_dir``
+    instead of using ``artifact_build_dir``, which is deleted by the package handler before validation runs
+    (https://github.com/ansible-collections/aap-snapshot-collection/issues/23).
