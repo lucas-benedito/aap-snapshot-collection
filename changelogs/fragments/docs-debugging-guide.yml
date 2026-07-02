@@ -1,0 +1,4 @@
+minor_changes:
+  - Add debugging guide covering OCP import failure recovery, leftover temporary
+    resource cleanup, idle state recovery, and common export issues
+    (https://github.com/ansible-collections/aap-snapshot-collection/pull/25).
