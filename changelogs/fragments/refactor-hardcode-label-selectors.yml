@@ -1,3 +1,0 @@
----
-minor_changes:
-  - Standardize gateway pod label selectors to hardcoded values matching operator deployment_type defaults.

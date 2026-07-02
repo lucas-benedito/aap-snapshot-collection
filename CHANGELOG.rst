@@ -4,6 +4,29 @@ ansible.aap\_snapshot Release Notes
 
 .. contents:: Topics
 
+v1.0.3
+======
+
+Minor Changes
+-------------
+
+- Add debugging guide covering OCP import failure recovery, leftover temporary resource cleanup, idle state recovery, and common export issues (https://github.com/ansible-collections/aap-snapshot-collection/pull/26).
+- Merge wait_for_pods and discover_components into a single pass to reduce redundant pod lookups during import.
+- Move scale and un-idle recovery from always to rescue block so they only run on import failure.
+- Remove duplicate gateway pod wait from import playbook.
+- Standardize gateway pod label selectors to hardcoded values matching operator deployment_type defaults.
+
+Bugfixes
+--------
+
+- Fix hub reconcile failing with ``automationgateway_admin_user is undefined`` by defining the admin username in the hub role's own defaults instead of depending on the gateway role's defaults (https://github.com/ansible-collections/aap-snapshot-collection/issues/46).
+- Fix meta/execution-environment.yml python and system dependency paths for ansible-builder.
+- Fix orphan instance detection to include nodes with null health check or null capacity after database restore.
+- Fix post-export artifact validation failing when ``artifact_dest_dir`` differs from the default. The validate play now correctly resolves the extracted artifact path relative to ``artifact_dest_dir`` instead of using ``artifact_build_dir``, which is deleted by the package handler before validation runs (https://github.com/ansible-collections/aap-snapshot-collection/issues/23).
+- Remove variable interpolation from task names to prevent exposing internal data in logs and CI output.
+- Replace non-existent pulpcore-manager repair-artifacts command with Pulp REST API call for hub content repair.
+- Reset gateway migrate_service_data flag during vestigial cleanup so the operator re-runs service registration after database restore.
+
 v1.0.2
 ======
 

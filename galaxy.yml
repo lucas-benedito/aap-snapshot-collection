@@ -1,7 +1,7 @@
 ---
 namespace: ansible
 name: aap_snapshot
-version: 1.0.2
+version: 1.0.3
 readme: README.md
 authors:
   - Ricardo Carrillo Cruz <ricarril@redhat.com>

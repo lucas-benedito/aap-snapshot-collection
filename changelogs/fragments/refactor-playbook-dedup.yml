@@ -1,4 +1,0 @@
----
-minor_changes:
-  - Move scale and un-idle recovery from always to rescue block so they only run on import failure.
-  - Remove duplicate gateway pod wait from import playbook.
