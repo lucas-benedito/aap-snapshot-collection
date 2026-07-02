@@ -26,7 +26,7 @@
     label: "{{ item.item.kind }}"
   when: item.resources | length > 0
 
-- name: Discover gateway pod
+- name: Wait for gateway pod to be running
   kubernetes.core.k8s_info:
     kind: Pod
     namespace: "{{ ocp_utils_ocp_namespace }}"
@@ -36,13 +36,60 @@
       - "status.phase=Running"
   register: _ocp_utils_found_pods
   until: _ocp_utils_found_pods.resources | length > 0
-  retries: "{{ _ocp_discover_retries | default(10) }}"
-  delay: "{{ _ocp_discover_delay | default(5) }}"
+  retries: "{{ _discover_retries | default(60) }}"
+  delay: "{{ _discover_delay | default(10) }}"
+  when: _wait_for_running | default(false) | bool
+
+- name: Discover gateway pod
+  kubernetes.core.k8s_info:
+    kind: Pod
+    namespace: "{{ ocp_utils_ocp_namespace }}"
+    label_selectors:
+      - "app.kubernetes.io/component=aap-gateway"
+    field_selectors:
+      - "status.phase=Running"
+  register: _ocp_utils_found_pods
+  when: not (_wait_for_running | default(false) | bool)
 
 - name: Set gateway pod facts
   ansible.builtin.set_fact:
     _ocp_utils_gateway_pod_name: "{{ _ocp_utils_found_pods.resources[0].metadata.name }}"
     _ocp_utils_gateway_container_name: "api"
+  when: _ocp_utils_found_pods.resources | default([]) | length > 0
+
+- name: Verify gateway database is reachable
+  kubernetes.core.k8s_exec:
+    namespace: "{{ ocp_utils_ocp_namespace }}"
+    pod: "{{ _ocp_utils_gateway_pod_name }}"
+    container: "api"
+    command: aap-gateway-manage check --database default
+  changed_when: false
+  register: _ocp_utils_gw_check
+  until: _ocp_utils_gw_check.rc == 0
+  retries: 30
+  delay: 10
+  when:
+    - _wait_for_running | default(false) | bool
+    - _ocp_utils_gateway_pod_name is defined
+
+- name: Wait for gateway pod readiness
+  kubernetes.core.k8s_info:
+    kind: Pod
+    namespace: "{{ ocp_utils_ocp_namespace }}"
+    name: "{{ _ocp_utils_gateway_pod_name }}"
+  register: _ocp_utils_gw_ready
+  until: >-
+    _ocp_utils_gw_ready.resources | length > 0
+    and (_ocp_utils_gw_ready.resources[0].status.conditions
+         | default([])
+         | selectattr('type', 'equalto', 'Ready')
+         | selectattr('status', 'equalto', 'True')
+         | list | length > 0)
+  retries: 30
+  delay: 10
+  when:
+    - _wait_for_running | default(false) | bool
+    - _ocp_utils_gateway_pod_name is defined
 
 - name: Discover gateway route
   kubernetes.core.k8s_info:
@@ -70,6 +117,23 @@
   no_log: "{{ (disable_no_log | default(false) | bool) | ternary(false, true) }}"
   when: _ocp_utils_admin_secret.resources | length > 0
 
+- name: Wait for controller pod to be running
+  kubernetes.core.k8s_info:
+    kind: Pod
+    namespace: "{{ ocp_utils_ocp_namespace }}"
+    label_selectors:
+      - "app.kubernetes.io/component=automationcontroller"
+      - "app.kubernetes.io/name={{ _controller_cr_name }}-task"
+    field_selectors:
+      - "status.phase=Running"
+  register: _ocp_utils_found_controller_pods
+  until: _ocp_utils_found_controller_pods.resources | length > 0
+  retries: "{{ _discover_retries | default(60) }}"
+  delay: "{{ _discover_delay | default(10) }}"
+  when:
+    - _controller_cr_name is defined
+    - _wait_for_running | default(false) | bool
+
 - name: Discover controller pod
   kubernetes.core.k8s_info:
     kind: Pod
@@ -80,7 +144,9 @@
     field_selectors:
       - "status.phase=Running"
   register: _ocp_utils_found_controller_pods
-  when: _controller_cr_name is defined
+  when:
+    - _controller_cr_name is defined
+    - not (_wait_for_running | default(false) | bool)
 
 - name: Set controller pod facts
   ansible.builtin.set_fact:
@@ -89,6 +155,22 @@
   when:
     - _controller_cr_name is defined
     - _ocp_utils_found_controller_pods.resources | default([]) | length > 0
+
+- name: Wait for EDA pod to be running
+  kubernetes.core.k8s_info:
+    kind: Pod
+    namespace: "{{ ocp_utils_ocp_namespace }}"
+    label_selectors:
+      - "app.kubernetes.io/component=eda-api"
+    field_selectors:
+      - "status.phase=Running"
+  register: _ocp_utils_found_eda_pods
+  until: _ocp_utils_found_eda_pods.resources | length > 0
+  retries: "{{ _discover_retries | default(60) }}"
+  delay: "{{ _discover_delay | default(10) }}"
+  when:
+    - _eda_cr_name is defined
+    - _wait_for_running | default(false) | bool
 
 - name: Discover EDA pod
   kubernetes.core.k8s_info:
@@ -99,7 +181,9 @@
     field_selectors:
       - "status.phase=Running"
   register: _ocp_utils_found_eda_pods
-  when: _eda_cr_name is defined
+  when:
+    - _eda_cr_name is defined
+    - not (_wait_for_running | default(false) | bool)
 
 - name: Set EDA pod facts
   ansible.builtin.set_fact:
@@ -108,6 +192,22 @@
   when:
     - _eda_cr_name is defined
     - _ocp_utils_found_eda_pods.resources | default([]) | length > 0
+
+- name: Wait for hub pod to be running
+  kubernetes.core.k8s_info:
+    kind: Pod
+    namespace: "{{ ocp_utils_ocp_namespace }}"
+    label_selectors:
+      - "app.kubernetes.io/name=automationhub-api"
+    field_selectors:
+      - "status.phase=Running"
+  register: _ocp_utils_found_hub_pods
+  until: _ocp_utils_found_hub_pods.resources | length > 0
+  retries: "{{ _discover_retries | default(60) }}"
+  delay: "{{ _discover_delay | default(10) }}"
+  when:
+    - _hub_cr_name is defined
+    - _wait_for_running | default(false) | bool
 
 - name: Discover hub pod
   kubernetes.core.k8s_info:
@@ -118,7 +218,9 @@
     field_selectors:
       - "status.phase=Running"
   register: _ocp_utils_found_hub_pods
-  when: _hub_cr_name is defined
+  when:
+    - _hub_cr_name is defined
+    - not (_wait_for_running | default(false) | bool)
 
 - name: Set hub pod facts
   ansible.builtin.set_fact:
