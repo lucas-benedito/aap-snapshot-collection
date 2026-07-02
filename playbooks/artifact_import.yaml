@@ -120,22 +120,9 @@
             ocp_idle_aap: false
 
         # --- Gateway-first reconcile (unblocks operator) ---
-        - name: Wait for gateway pod
-          kubernetes.core.k8s_info:
-            kind: Pod
-            namespace: "{{ ocp_namespace | default('aap') }}"
-            label_selectors:
-              - "app.kubernetes.io/component=aap-gateway"
-            field_selectors:
-              - status.phase=Running
-          register: _import_gw_pods
-          until: _import_gw_pods.resources | length > 0
-          retries: 60
-          delay: 10
-
         - name: Set gateway pod facts for early reconcile
           ansible.builtin.set_fact:
-            _ocp_utils_gateway_pod_name: "{{ _import_gw_pods.resources[0].metadata.name }}"
+            _ocp_utils_gateway_pod_name: "{{ _ocp_utils_gateway_pods.resources[0].metadata.name }}"
             _ocp_utils_gateway_container_name: "api"
 
         - name: Load secret mapping from ocp_utils
@@ -250,33 +237,26 @@
           ansible.builtin.set_fact:
             _import_succeeded: true
 
-      always:
+      rescue:
         - name: Scale operators back up (recovery)
-          block:
-            - name: Scale operators to 1
-              ansible.builtin.include_role:
-                name: ansible.aap_snapshot.ocp_utils
-                tasks_from: scale_operators.yml
-              vars:
-                ocp_operator_replicas: 1
-          rescue:
-            - name: Scale operators recovery failed
-              ansible.builtin.debug:
-                msg: "Failed to scale operators back up. Manual intervention may be required."
+          ansible.builtin.include_role:
+            name: ansible.aap_snapshot.ocp_utils
+            tasks_from: scale_operators.yml
+          vars:
+            ocp_operator_replicas: 1
 
         - name: Resume AAP (recovery)
-          block:
-            - name: Un-idle AAP
-              ansible.builtin.include_role:
-                name: ansible.aap_snapshot.ocp_utils
-                tasks_from: idle_aap.yml
-              vars:
-                ocp_idle_aap: false
-          rescue:
-            - name: Resume AAP recovery failed
-              ansible.builtin.debug:
-                msg: "Failed to un-idle AAP. Manual intervention may be required."
+          ansible.builtin.include_role:
+            name: ansible.aap_snapshot.ocp_utils
+            tasks_from: idle_aap.yml
+          vars:
+            ocp_idle_aap: false
 
+        - name: Report import failure
+          ansible.builtin.fail:
+            msg: "Import failed. Operators and AAP have been restored. Check the errors above."
+
+      always:
         - name: Remove temporary migration resources
           ansible.builtin.include_role:
             name: ansible.aap_snapshot.ocp_utils
