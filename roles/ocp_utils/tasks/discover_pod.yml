@@ -1,5 +1,5 @@
 ---
-- name: "Discover pod for {{ _discover_label }}"
+- name: "Discover pod"
   kubernetes.core.k8s_info:
     kind: Pod
     namespace: "{{ ocp_utils_ocp_namespace }}"
@@ -17,7 +17,7 @@
   retries: "{{ _discover_retries | default(30) }}"
   delay: "{{ _discover_delay | default(10) }}"
 
-- name: "Set pod facts for {{ _discover_label }}"
+- name: "Set pod facts"
   ansible.builtin.set_fact:
     "{{ _discover_pod_fact }}": "{{ _ocp_utils_discovered_pod.resources[0].metadata.name }}"
     "{{ _discover_container_fact }}": "{{ _discover_container_name }}"

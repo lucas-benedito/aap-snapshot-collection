@@ -3,10 +3,10 @@
   ansible.builtin.set_fact:
     _operations_current_component: "{{ _operations_component_config[component_name] }}"
 
-- name: "Gather version (RPM) for {{ component_name }}"
+- name: "Gather version (RPM)"
   when: aap_platform == 'rpm'
   block:
-    - name: "Get version for {{ component_name }}"
+    - name: "Get installed version"
       ansible.aap_snapshot.aap_component_info:
         component: "{{ component_name }}"
         gather: [version]
@@ -14,7 +14,7 @@
       become: true
       become_user: "{{ _operations_current_component.django_user }}"
 
-    - name: "Set version variable for {{ component_name }}"
+    - name: "Set version fact"
       ansible.builtin.set_fact:
         "_{{ component_name }}_version": "{{ _operations_component_info.version }}"
       delegate_facts: true
@@ -27,10 +27,10 @@
       delegate_to: localhost
       when: _operations_current_component.has_aap_version | bool
 
-- name: "Gather version (OCP) for {{ component_name }}"
+- name: "Gather version (OCP)"
   when: aap_platform == 'operator'
   block:
-    - name: "Get version via pod for {{ component_name }}"
+    - name: "Get version via pod"
       kubernetes.core.k8s_exec:
         namespace: "{{ operations_ocp_namespace }}"
         pod: "{{ _component_pod_name }}"
@@ -41,7 +41,7 @@
       register: _operations_result
       changed_when: false
 
-    - name: "Set version variable for {{ component_name }}"
+    - name: "Set version fact"
       ansible.builtin.set_fact:
         "_{{ component_name }}_version": "{{ _operations_result.stdout_lines | last | trim }}"
       delegate_facts: true
@@ -95,10 +95,10 @@
       delegate_to: localhost
       when: _operations_current_component.has_aap_version | bool
 
-- name: "Gather version (containerized) for {{ component_name }}"
+- name: "Gather version (containerized)"
   when: aap_platform == 'containerized'
   block:
-    - name: "Get version for {{ component_name }}"
+    - name: "Get installed version"
       containers.podman.podman_container_exec:
         name: "{{ _operations_current_component.container_name }}"
         command: >-
@@ -107,7 +107,7 @@
       changed_when: false
       register: _operations_result
 
-    - name: "Set version variable for {{ component_name }}"
+    - name: "Set version fact"
       ansible.builtin.set_fact:
         "_{{ component_name }}_version": "{{ _operations_result.stdout_lines | last | trim }}"
       delegate_facts: true

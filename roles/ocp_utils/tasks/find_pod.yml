@@ -1,5 +1,5 @@
 ---
-- name: "Find running pod for {{ _ocp_pod_label }}"
+- name: "Find running pod"
   kubernetes.core.k8s_info:
     kind: Pod
     namespace: "{{ ocp_utils_ocp_namespace }}"

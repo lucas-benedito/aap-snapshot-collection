@@ -1,5 +1,5 @@
 ---
-- name: "Set idle_aap to {{ ocp_idle_aap | bool }}"
+- name: "Set idle_aap on AAP CR"
   kubernetes.core.k8s:
     api_version: "{{ ocp_utils_aap_cr_api_version }}"
     kind: "{{ ocp_utils_aap_cr_kind }}"

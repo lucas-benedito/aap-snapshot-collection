@@ -37,7 +37,7 @@
       failed_when: "'Created partitions for' not in _operations_result.stdout"
 
 # --- Database export for all components ---
-- name: "Export postgresql for {{ component_name }}"
+- name: "Export postgresql database"
   ansible.builtin.include_role:
     name: ansible.aap_snapshot.postgresql
     tasks_from: db_export.yml

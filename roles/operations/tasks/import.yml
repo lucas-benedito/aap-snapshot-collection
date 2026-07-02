@@ -3,7 +3,7 @@
   ansible.builtin.set_fact:
     _operations_current_component: "{{ _operations_component_config[component_name] }}"
 
-- name: "Get OCP DB credentials for {{ component_name }}"
+- name: "Get OCP DB credentials"
   ansible.builtin.include_role:
     name: ansible.aap_snapshot.ocp_utils
     tasks_from: get_db_credentials.yml
@@ -11,7 +11,7 @@
     ocp_pg_config_secret: "{{ _operations_current_component.postgres_secret }}"
   when: aap_platform == 'operator'
 
-- name: "Bridge OCP DB credentials for {{ component_name }}"
+- name: "Bridge OCP DB credentials"
   ansible.builtin.set_fact:
     _operations_db_host: "{{ _ocp_utils_db_host }}"
     _operations_db_port: "{{ _ocp_utils_db_port }}"
@@ -22,7 +22,7 @@
   no_log: "{{ __operations_no_log }}"
   when: aap_platform == 'operator'
 
-- name: "Get containerized DB credentials for {{ component_name }}"
+- name: "Get containerized DB credentials"
   ansible.builtin.include_role:
     name: ansible.aap_snapshot.postgresql
     tasks_from: db_auth.yml
@@ -46,7 +46,7 @@
   no_log: "{{ __operations_no_log }}"
   when: aap_platform == 'containerized'
 
-- name: "Restore database for {{ component_name }}"
+- name: "Restore database"
   ansible.builtin.include_role:
     name: ansible.aap_snapshot.postgresql
     tasks_from: db_import.yml
@@ -60,7 +60,7 @@
     postgresql_restore_dbname: "{{ _operations_db_name | default(component_name) }}"
     postgresql_restore_source: "{{ __operations_artifact_extract_dir }}/{{ component_name }}/{{ component_name }}.pgc"
 
-- name: "Update OCP secret for {{ component_name }}"
+- name: "Update OCP secret"
   kubernetes.core.k8s:
     kind: Secret
     name: "{{ _operations_current_component.k8s_secret_name }}"
@@ -73,7 +73,7 @@
     - aap_platform == 'operator'
     - artifact_secrets[_operations_current_component.secret_keys[0]] is defined
 
-- name: "Update OCP extra secrets for {{ component_name }}"
+- name: "Update OCP extra secrets"
   kubernetes.core.k8s:
     kind: Secret
     name: "{{ item.secret_name }}"
@@ -90,7 +90,7 @@
     - _operations_current_component.ocp_extra_secrets is defined
     - artifact_secrets[item.artifact_key] is defined
 
-- name: "Update containerized podman secrets (multi) for {{ component_name }}"
+- name: "Update containerized podman secrets (multi)"
   containers.podman.podman_secret:
     name: "{{ item.name }}"
     data: "{{ artifact_secrets[item.artifact_key] | b64decode }}"
@@ -105,7 +105,7 @@
     - _operations_current_component.podman_secrets is defined
     - artifact_secrets[item.artifact_key] is defined
 
-- name: "Update containerized podman secret (single) for {{ component_name }}"
+- name: "Update containerized podman secret (single)"
   containers.podman.podman_secret:
     name: "{{ _operations_current_component.podman_secret_name }}"
     data: "{{ artifact_secrets[_operations_current_component.secret_keys[0]] | b64decode }}"

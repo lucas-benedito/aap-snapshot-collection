@@ -1,0 +1,3 @@
+---
+bugfixes:
+  - Remove variable interpolation from task names to prevent exposing internal data in logs and CI output.
