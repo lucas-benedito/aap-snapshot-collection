@@ -251,7 +251,10 @@
 
         - name: Report import failure
           ansible.builtin.fail:
-            msg: "Import failed. Operators and AAP have been restored. Check the errors above."
+            msg: >-
+              Import failed. Operators and AAP have been restored.
+              Failed task: {{ ansible_failed_task.name | default('unknown') }}.
+              Error: {{ ansible_failed_result.msg | default(ansible_failed_result | to_nice_json) }}
 
       always:
         - name: Remove temporary migration resources
