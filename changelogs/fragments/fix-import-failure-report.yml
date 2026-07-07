@@ -1,0 +1,4 @@
+bugfixes:
+  - import - Include the original error details in the import failure
+    report instead of a generic message
+    (https://github.com/ansible-collections/aap-snapshot-collection/pull/XX).
