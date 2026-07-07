@@ -1,0 +1,4 @@
+bugfixes:
+  - automationhub - Fixed incorrect gateway service name in Pulp repair URL
+    for OCP deployments
+    (https://github.com/ansible-collections/aap-snapshot-collection/pull/XX).
