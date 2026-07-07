@@ -4,6 +4,16 @@ ansible.aap\_snapshot Release Notes
 
 .. contents:: Topics
 
+v1.0.4
+======
+
+Bugfixes
+--------
+
+- Added top-level ``requirements.txt`` to the collection so that ``ansible-builder`` can resolve Python dependencies (``pyyaml``, ``kubernetes``) when constructing execution environments. Also added missing ``kubernetes`` dependency to ``meta/ee-requirements.txt`` (https://github.com/ansible-collections/aap-snapshot-collection/issues/48).
+- automationhub - Fixed incorrect gateway service name in Pulp repair URL for OCP deployments (https://github.com/ansible-collections/aap-snapshot-collection/pull/49).
+- import - Include the original error details in the import failure report instead of a generic message (https://github.com/ansible-collections/aap-snapshot-collection/pull/XX).
+
 v1.0.3
 ======
 
