@@ -38,7 +38,7 @@
       cutoff = timezone.now() - timedelta(seconds=600);
       stale = Q(last_health_check__lt=cutoff) | Q(last_health_check__isnull=True);
       dead = Q(capacity=0) | Q(capacity__isnull=True);
-      orphans = list(Instance.objects.filter(stale, dead).values_list(
+      orphans = list(Instance.objects.filter(stale | dead).values_list(
       'hostname', flat=True));
       print(json.dumps(orphans))
     _manage_label: "controller list orphaned instances"
