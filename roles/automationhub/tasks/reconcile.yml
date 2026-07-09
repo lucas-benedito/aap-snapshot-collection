@@ -45,6 +45,42 @@
   no_log: "{{ not (disable_no_log | default(false) | bool) }}"
   when: aap_platform != 'operator'
 
+- name: Wait for AutomationHub API to be ready
+  kubernetes.core.k8s_info:
+    kind: AutomationHub
+    api_version: automationhub.ansible.com/v1beta1
+    namespace: "{{ automationhub_ocp_namespace }}"
+    name: "{{ _hub_cr_name }}"
+  register: _automationhub_cr_status
+  until: >-
+    _automationhub_cr_status.resources | length > 0
+    and (_automationhub_cr_status.resources[0].status.conditions | default([])
+         | selectattr('type', 'equalto', 'Automationhub-API-Ready')
+         | selectattr('status', 'equalto', 'True')
+         | list | length > 0)
+  retries: 60
+  delay: 15
+  when:
+    - aap_platform == 'operator'
+    - _hub_cr_name is defined
+
+- name: Wait for hub API to be routable through gateway
+  kubernetes.core.k8s_exec:
+    namespace: "{{ automationhub_ocp_namespace }}"
+    pod: "{{ _ocp_utils_gateway_pod_name }}"
+    container: proxy
+    command: >-
+      curl -sf -o /dev/null
+      http://localhost:8000/api/galaxy/pulp/api/v3/status/
+  register: _automationhub_envoy_check
+  changed_when: false
+  until: _automationhub_envoy_check.rc == 0
+  retries: 5
+  delay: 30
+  when:
+    - aap_platform == 'operator'
+    - _ocp_utils_gateway_pod_name is defined
+
 - name: Run Pulp content repair
   block:
     - name: Trigger Pulp repair via API
