@@ -1,0 +1,4 @@
+---
+bugfixes:
+  - >-
+    Fix the URL for Pulp repair API call to call the route instead of the service.
