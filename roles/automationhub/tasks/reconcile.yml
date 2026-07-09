@@ -49,7 +49,7 @@
   block:
     - name: Trigger Pulp repair via API
       ansible.builtin.uri:
-        url: "{{ _automationhub_gw_api_url }}/api/galaxy/pulp/api/v3/repair/"
+        url: "https://{{ ocp_utils_gateway_hostname }}/api/galaxy/pulp/api/v3/repair/"
         method: POST
         body_format: json
         body:
