@@ -1,0 +1,3 @@
+---
+bugfixes:
+  - Delete controller migration jobs before scaling operators back up during OCP import to prevent the controller operator from waiting on stale jobs from the restored database.

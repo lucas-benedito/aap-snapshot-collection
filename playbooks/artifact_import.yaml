@@ -142,6 +142,13 @@
             tasks_from: import.yml
           when: "'eda' in _import_components"
 
+        # --- Delete controller migration jobs before scaling operators ---
+        - name: Delete controller migration jobs
+          ansible.builtin.include_role:
+            name: ansible.aap_snapshot.ocp_utils
+            tasks_from: delete_controller_migration_jobs.yml
+          when: "'controller' in _import_components"
+
         # --- Resume AAP ---
         - name: Scale operators back up
           ansible.builtin.include_role:
