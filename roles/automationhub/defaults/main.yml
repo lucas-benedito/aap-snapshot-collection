@@ -4,5 +4,7 @@ automationhub_gateway_admin_user: "admin"
 
 automationhub_pulp_data_dir: "/var/lib/pulp/media"
 automationhub_content_tar_name: "hub_content.tar"
+# Staging directory for the hub content tarball on the remote host.
+# Set this to a larger filesystem if /tmp is too small for your hub data.
 automationhub_content_staging_dir: "/tmp"
 automationhub_export_hub_content: true
