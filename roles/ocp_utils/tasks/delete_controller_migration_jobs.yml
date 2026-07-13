@@ -1,0 +1,27 @@
+---
+- name: Find controller jobs
+  kubernetes.core.k8s_info:
+    api_version: batch/v1
+    kind: Job
+    namespace: "{{ ocp_utils_ocp_namespace }}"
+    label_selectors:
+      - "app.kubernetes.io/component=automationcontroller"
+      - "app.kubernetes.io/managed-by=automationcontroller-operator"
+      - "app.kubernetes.io/part-of={{ _controller_cr_name }}"
+  register: _controller_jobs
+
+- name: Delete controller migration jobs
+  kubernetes.core.k8s:
+    api_version: batch/v1
+    kind: Job
+    namespace: "{{ ocp_utils_ocp_namespace }}"
+    name: "{{ item.metadata.name }}"
+    state: absent
+    wait: true
+    wait_timeout: 300
+  loop: >-
+    {{ _controller_jobs.resources | default([])
+       | selectattr('metadata.name', 'match', '.*migration.*')
+       | list }}
+  loop_control:
+    label: "{{ item.metadata.name }}"
