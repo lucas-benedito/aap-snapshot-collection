@@ -17,11 +17,15 @@
 
 - name: Check OCP target requirements
   ansible.builtin.include_tasks: check_ocp_target.yml
-  when: aap_platform == 'operator'
+  when:
+    - aap_platform == 'operator'
+    - inventory_hostname == 'localhost'
 
 - name: Check AAP CR health
   ansible.builtin.include_tasks: check_aap_cr.yml
-  when: aap_platform == 'operator'
+  when:
+    - aap_platform == 'operator'
+    - inventory_hostname == 'localhost'
 
 - name: Check component services
   ansible.builtin.include_tasks: check_services.yml
