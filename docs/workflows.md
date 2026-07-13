@@ -94,7 +94,7 @@ When `aap_platform: containerized`:
 
 ### Phase 4: Prepare Migration Resources (OCP only)
 
-- Creates a temporary PVC (`aap-snapshot-temp`, 200Gi default)
+- Creates a temporary PVC (`aap-snapshot-temp`, 60Gi default)
 - Creates a temporary PostgreSQL deployment with the PVC mounted
 - Transfers the artifact to the temporary pod
 

@@ -245,7 +245,7 @@ ansible-playbook ansible.aap_snapshot.artifact_import \
 | Target namespace | `ocp_namespace` | `aap` | Non-default namespace |
 | Operator namespace | `operator_namespace` | `{{ ocp_namespace }}` | Cluster-scoped operators in `openshift-operators` |
 | Keep temp on failure | `keep_temp_on_failure` | `true` | Set `false` to auto-cleanup on failure |
-| Temp PVC size | `temp_pvc_size` | `200Gi` | Storage-constrained clusters (set to 2x artifact size) |
+| Temp PVC size | `temp_pvc_size` | `60Gi` | Storage-constrained clusters (set to 2x artifact size) |
 
 ---
 

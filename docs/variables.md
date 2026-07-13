@@ -86,14 +86,14 @@ database restores. These are cleaned up after import completes.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `temp_pvc_name` | `aap-snapshot-temp` | Name for the temporary PVC |
-| `temp_pvc_size` | `200Gi` | Size of the temporary PVC (see sizing guidance below) |
+| `temp_pvc_size` | `60Gi` | Size of the temporary PVC (see sizing guidance below) |
 | `temp_pvc_access_mode` | `ReadWriteOnce` | PVC access mode |
 | `temp_deployment_name` | `aap-snapshot-temp-postgres` | Name for the temporary PostgreSQL deployment |
 | `temp_postgres_image` | `registry.redhat.io/rhel9/postgresql-15:latest` | Container image for the temporary PostgreSQL pod |
 
 **Sizing `temp_pvc_size`:** The PVC must hold the artifact tarball and its extracted contents
-simultaneously, so set it to at least **2× your artifact file size**. The 200Gi default is
-appropriate for large production deployments; on storage-constrained clusters (CRC, single-node
+simultaneously, so set it to at least **2x your artifact file size**. The 60Gi default is
+appropriate for most deployments; on storage-constrained clusters (CRC, single-node
 MicroShift, or clusters with limited thin-pool capacity) provision too little and the temporary
 pod stays `Pending` indefinitely. Override in your inventory:
 

@@ -170,7 +170,7 @@ flowchart TD
         end
 
         subgraph STAGE["Stage Artifact"]
-            C8["create_temp_resources.yml<br/>Create PVC: aap-snapshot-temp (200Gi)<br/>Create Deployment: postgresql-15 pod<br/>sleep infinity"]
+            C8["create_temp_resources.yml<br/>Create PVC: aap-snapshot-temp (60Gi)<br/>Create Deployment: postgresql-15 pod<br/>sleep infinity"]
             C9["transfer_artifact.yml<br/>k8s_cp artifact -> /tmp/migration/<br/>tar xf inside pod"]
 
             C8 --> C9
