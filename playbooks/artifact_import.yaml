@@ -358,7 +358,7 @@
         - inventory_hostname == groups['eda_groups'][0]
 
 - name: Start containerized services
-  ansible.builtin.import_playbook: containerized/start_aap.yaml
+  ansible.builtin.import_playbook: common/start_services.yaml
   when: aap_platform == 'containerized'
 
 - name: Reconcile (containerized)

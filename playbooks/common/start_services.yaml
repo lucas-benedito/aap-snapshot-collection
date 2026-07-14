@@ -1,0 +1,55 @@
+---
+- name: Start EDA services
+  hosts: "{{ _start_eda_hosts | default('eda_groups') }}"
+  gather_facts: false
+  any_errors_fatal: true
+  max_fail_percentage: 0
+  tasks:
+    - name: Start EDA
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationeda
+        tasks_from: start_service.yml
+
+- name: Start Hub services
+  hosts: "{{ _start_hub_hosts | default('hub_groups') }}"
+  gather_facts: false
+  any_errors_fatal: true
+  max_fail_percentage: 0
+  tasks:
+    - name: Start Hub
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationhub
+        tasks_from: start_service.yml
+
+- name: Start Controller services
+  hosts: "{{ _start_controller_hosts | default('controller_groups') }}"
+  gather_facts: false
+  any_errors_fatal: true
+  max_fail_percentage: 0
+  tasks:
+    - name: Start Controller
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationcontroller
+        tasks_from: start_service.yml
+
+- name: Start Gateway services
+  hosts: "{{ _start_gateway_hosts | default('gateway_groups') }}"
+  gather_facts: false
+  any_errors_fatal: true
+  max_fail_percentage: 0
+  tasks:
+    - name: Start Gateway
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationgateway
+        tasks_from: start_service.yml
+
+- name: Start monitoring services
+  hosts: "{{ _start_monitoring_hosts | default('controller_groups:eda_groups:gateway_groups:hub_groups') }}"
+  gather_facts: false
+  any_errors_fatal: true
+  max_fail_percentage: 0
+  tasks:
+    - name: Start monitoring
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.pcp
+        tasks_from: start_service.yml
