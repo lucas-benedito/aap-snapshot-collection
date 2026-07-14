@@ -37,7 +37,7 @@
   loop: '{{ groups.get("controller_groups", []) }}'
   when:
     - groups.get('controller_groups', []) | length > 0
-    - aap_platform | default('rpm') == 'rpm'
+    - aap_platform | default('') == 'rpm'
 
 - name: Initialize hub directory
   ansible.builtin.file:

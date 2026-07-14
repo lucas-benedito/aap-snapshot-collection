@@ -1,0 +1,3 @@
+---
+bugfixes:
+  - Restrict OCP preflight checks to localhost to prevent failures when using a containerized inventory with ``aap_platform=operator``.
