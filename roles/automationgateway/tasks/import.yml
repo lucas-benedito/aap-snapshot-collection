@@ -1,7 +1,21 @@
 ---
-- name: Import gateway component
+- name: Get DB credentials for gateway
   ansible.builtin.include_role:
     name: ansible.aap_snapshot.operations
-    tasks_from: import.yml
+    tasks_from: get_db_credentials.yml
+  vars:
+    component_name: "{{ automationgateway_component_name }}"
+
+- name: Restore database for gateway
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.operations
+    tasks_from: db_import.yml
+  vars:
+    component_name: "{{ automationgateway_component_name }}"
+
+- name: Update secrets for gateway
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.operations
+    tasks_from: update_secret.yml
   vars:
     component_name: "{{ automationgateway_component_name }}"

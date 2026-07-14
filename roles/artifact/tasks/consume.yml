@@ -1,5 +1,159 @@
 ---
-- name: Import and reconcile on OCP
+- name: Consume artifact (containerized)
+  when: aap_platform == 'containerized'
+  block:
+    # --- Stop services ---
+    - name: Stop monitoring
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.pcp
+        tasks_from: stop_service.yml
+      when: inventory_hostname in (groups.get('controller_groups', [])
+              + groups.get('eda_groups', [])
+              + groups.get('gateway_groups', [])
+              + groups.get('hub_groups', []))
+
+    - name: Stop EDA
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationeda
+        tasks_from: stop_service.yml
+      when:
+        - groups.get('eda_groups', []) | length > 0
+        - inventory_hostname == groups['eda_groups'][0]
+
+    - name: Stop hub
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationhub
+        tasks_from: stop_service.yml
+      when:
+        - groups.get('hub_groups', []) | length > 0
+        - inventory_hostname == groups['hub_groups'][0]
+
+    - name: Stop controller
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationcontroller
+        tasks_from: stop_service.yml
+      when:
+        - groups.get('controller_groups', []) | length > 0
+        - inventory_hostname == groups['controller_groups'][0]
+
+    - name: Stop gateway
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationgateway
+        tasks_from: stop_service.yml
+      when:
+        - groups.get('gateway_groups', []) | length > 0
+        - inventory_hostname == groups['gateway_groups'][0]
+
+    # --- Import databases ---
+    - name: Import controller
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationcontroller
+        tasks_from: import.yml
+      when:
+        - groups.get('controller_groups', []) | length > 0
+        - inventory_hostname == groups['controller_groups'][0]
+
+    - name: Import hub
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationhub
+        tasks_from: import.yml
+      when:
+        - groups.get('hub_groups', []) | length > 0
+        - inventory_hostname == groups['hub_groups'][0]
+
+    - name: Import gateway
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationgateway
+        tasks_from: import.yml
+      when:
+        - groups.get('gateway_groups', []) | length > 0
+        - inventory_hostname == groups['gateway_groups'][0]
+
+    - name: Import EDA
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationeda
+        tasks_from: import.yml
+      when:
+        - groups.get('eda_groups', []) | length > 0
+        - inventory_hostname == groups['eda_groups'][0]
+
+    # --- Start services ---
+    - name: Start EDA
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationeda
+        tasks_from: start_service.yml
+      when:
+        - groups.get('eda_groups', []) | length > 0
+        - inventory_hostname == groups['eda_groups'][0]
+
+    - name: Start hub
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationhub
+        tasks_from: start_service.yml
+      when:
+        - groups.get('hub_groups', []) | length > 0
+        - inventory_hostname == groups['hub_groups'][0]
+
+    - name: Start controller
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationcontroller
+        tasks_from: start_service.yml
+      when:
+        - groups.get('controller_groups', []) | length > 0
+        - inventory_hostname == groups['controller_groups'][0]
+
+    - name: Start gateway
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationgateway
+        tasks_from: start_service.yml
+      when:
+        - groups.get('gateway_groups', []) | length > 0
+        - inventory_hostname == groups['gateway_groups'][0]
+
+    - name: Start monitoring
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.pcp
+        tasks_from: start_service.yml
+      when: inventory_hostname in (groups.get('controller_groups', [])
+              + groups.get('eda_groups', [])
+              + groups.get('gateway_groups', [])
+              + groups.get('hub_groups', []))
+
+    # --- Reconcile ---
+    - name: Reconcile gateway
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationgateway
+        tasks_from: reconcile.yml
+      when:
+        - groups.get('gateway_groups', []) | length > 0
+        - inventory_hostname == groups['gateway_groups'][0]
+
+    - name: Reconcile controller
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationcontroller
+        tasks_from: reconcile.yml
+      when:
+        - groups.get('controller_groups', []) | length > 0
+        - inventory_hostname == groups['controller_groups'][0]
+
+    - name: Reconcile hub
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationhub
+        tasks_from: reconcile.yml
+      when:
+        - groups.get('hub_groups', []) | length > 0
+        - inventory_hostname == groups['hub_groups'][0]
+
+    - name: Reconcile EDA
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationeda
+        tasks_from: reconcile.yml
+      when:
+        - groups.get('eda_groups', []) | length > 0
+        - inventory_hostname == groups['eda_groups'][0]
+
+- name: Consume artifact (OCP)
+  when: aap_platform == 'operator'
   block:
     # --- Pre-import checks ---
     - name: Validate target version matches artifact
