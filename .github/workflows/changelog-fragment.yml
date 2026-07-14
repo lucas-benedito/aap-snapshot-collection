@@ -1,0 +1,43 @@
+---
+name: Changelog Fragment Check
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  changelog-fragment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Check for changelog fragment
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          git fetch origin "$BASE_REF"
+          changed=$(git diff --name-only "origin/$BASE_REF"...HEAD)
+
+          user_facing=$(echo "$changed" | grep -E '^(roles|playbooks|plugins|meta|galaxy\.yml)' || true)
+
+          if [ -z "$user_facing" ]; then
+            echo "No user-facing changes detected. Changelog fragment not required."
+            exit 0
+          fi
+
+          echo "User-facing changes detected:"
+          echo "$user_facing"
+          echo ""
+
+          fragment=$(echo "$changed" | grep '^changelogs/fragments/' || true)
+
+          if [ -z "$fragment" ]; then
+            echo "ERROR: A changelog fragment is required for user-facing changes."
+            echo "Add a YAML file to changelogs/fragments/ describing your change."
+            echo "See CONTRIBUTING.md for format and exemption details."
+            exit 1
+          fi
+
+          echo "Changelog fragment found: $fragment"
