@@ -41,29 +41,15 @@ playbooks/
 ├── artifact_export.yaml              # Main export entry point
 ├── artifact_import.yaml              # Main import entry point
 ├── artifact_verify.yaml              # Standalone verification
-├── db_export.yaml                    # Generic database export
-├── secrets_dump.yaml                 # Generic secrets extraction
-├── start_aap.yaml                    # Generic service start
-├── stop_aap.yaml                     # Generic service stop
-├── common/
-│   ├── stop_services.yaml            # Ordered service shutdown
-│   └── validate_artifact.yaml        # Imported by export for validation
-├── containerized/
-│   ├── artifact_import.yaml          # Containerized-specific import
-│   ├── load_secrets.yml              # Load podman secrets
-│   └── start_aap.yaml               # Start containerized services
-├── rpm/
-│   ├── artifact_export.yaml          # RPM-specific export
-│   ├── db_export.yaml                # RPM database export
-│   ├── secrets_dump.yaml             # RPM secrets extraction
-│   ├── start_aap.yaml               # Start RPM services
-│   └── stop_aap.yaml                # Stop RPM services
-└── ocp/
-    └── artifact_export.yaml          # OCP-specific export
+└── common/
+    ├── start_services.yaml           # Ordered service startup
+    ├── stop_services.yaml            # Ordered service shutdown
+    └── validate_artifact.yaml        # Imported by export for validation
 ```
 
 The main entry point playbooks (`artifact_export.yaml`, `artifact_import.yaml`)
-dispatch to platform-specific logic based on the `aap_platform` variable.
+use the `aap_platform` variable to conditionally execute platform-specific logic
+inline. Common service start/stop playbooks are in the `common/` subdirectory.
 
 ## Role Reference
 
