@@ -1,0 +1,6 @@
+---
+minor_changes:
+  - automationcontroller - Add ``automationcontroller_export_dir`` variable to configure
+    the remote staging directory for database exports. Defaults to ``postgresql_export_dir``.
+    Users with limited ``/tmp`` space can now point this to a larger filesystem without
+    affecting other components.
