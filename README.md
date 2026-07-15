@@ -2,20 +2,19 @@
 
 ## Description
 
-This collection provides a complete migration framework for Ansible Automation
+This collection provides a migration framework for Ansible Automation
 Platform (AAP) clusters. It exports platform data into a portable artifact and
-imports it into a new deployment, supporting migration across all AAP
-installation types.
+imports it into a new deployment.
 
 **Supported migration paths:**
 
-| Source | Target |
-|--------|--------|
-| RPM Installer | Containerized Installer |
-| RPM Installer | OCP Operator |
-| Containerized Installer | Containerized Installer |
-| Containerized Installer | OCP Operator |
-| OCP Operator | OCP Operator |
+| Source | Target | Status |
+|--------|--------|--------|
+| RPM Installer | OCP Operator | Supported |
+| RPM Installer | Containerized Installer | Planned |
+| Containerized Installer | OCP Operator | Planned |
+| Containerized Installer | Containerized Installer | Planned |
+| OCP Operator | OCP Operator | Planned |
 
 The collection handles four AAP components: Controller, Hub (with Pulp
 content), Gateway, and EDA. Components are processed conditionally based on
@@ -47,8 +46,8 @@ what is present in the inventory and artifact.
 ### Platform Requirements
 
 - **RPM export:** SSH access to component hosts, `become` privileges
-- **Containerized:** SSH access to component hosts, podman access
-- **OCP Operator:** `kubeconfig` with cluster-admin or namespace-admin access
+- **OCP Operator import:** `kubeconfig` with cluster-admin or namespace-admin access
+- **Containerized:** SSH access to component hosts, podman access *(planned)*
 
 ## Installation
 
@@ -95,34 +94,17 @@ ansible-galaxy collection install ansible.aap_snapshot --upgrade
 
 ### Export a migration artifact
 
-Create a migration artifact from a running AAP deployment:
+Create a migration artifact from a running RPM deployment:
 
 ```bash
-# From an RPM deployment
 ansible-playbook -i inventory ansible.aap_snapshot.artifact_export -e aap_platform=rpm
-
-# From a containerized deployment
-ansible-playbook -i inventory ansible.aap_snapshot.artifact_export -e aap_platform=containerized
-
-# From an OCP operator deployment
-ansible-playbook -i inventory ansible.aap_snapshot.artifact_export \
-  -e aap_platform=operator \
-  -e ocp_namespace=aap \
-  -e aap_instance_name=aap
 ```
 
 ### Import a migration artifact
 
-Restore a migration artifact into a target AAP deployment:
+Restore a migration artifact into an OCP operator deployment:
 
 ```bash
-# Into a containerized deployment
-ansible-playbook -i inventory ansible.aap_snapshot.artifact_import \
-  -e aap_platform=containerized \
-  -e artifact_dir=/path/to/artifacts \
-  -e artifact_file=/path/to/aap-snapshot-2.6-20260701-120000.tar
-
-# Into an OCP operator deployment
 ansible-playbook -i inventory ansible.aap_snapshot.artifact_import \
   -e aap_platform=operator \
   -e artifact_file=/path/to/aap-snapshot-2.6-20260701-120000.tar \
@@ -143,7 +125,7 @@ ansible-playbook ansible.aap_snapshot.artifact_verify \
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `aap_platform` | Yes | - | Platform type: `rpm`, `containerized`, or `operator` |
+| `aap_platform` | Yes | - | Platform type: `rpm` (export) or `operator` (import); `containerized` is planned |
 | `artifact_dir` | No | `$PWD` | Directory for artifact creation/extraction |
 | `artifact_file` | Import/Verify | - | Path to the artifact archive |
 | `ocp_namespace` | OCP | `aap` | OpenShift namespace |
@@ -155,8 +137,7 @@ See the [variables reference](https://github.com/ansible-collections/aap-snapsho
 
 ## Testing
 
-The collection supports RPM, containerized, and OCP operator deployments
-on RHEL 8 and RHEL 9.
+The collection supports RPM export and OCP operator import on RHEL 8 and RHEL 9.
 
 Dev dependencies: `pip install pytest pyyaml ansible-lint`
 
