@@ -169,7 +169,7 @@
 
     - name: Determine importable components
       ansible.builtin.set_fact:
-        _import_components: >-
+        _artifact_import_components: >-
           {{ artifact_manifest.components | map(attribute='name') | list
              | intersect(
                (['controller'] if _controller_cr_name is defined else [])
@@ -185,7 +185,7 @@
           on the target - skipping.
       loop: >-
         {{ artifact_manifest.components | map(attribute='name') | list
-           | difference(_import_components) }}
+           | difference(_artifact_import_components) }}
 
     - name: Warn about components on target but not in artifact
       ansible.builtin.debug:
@@ -197,7 +197,7 @@
             + (['hub'] if _hub_cr_name is defined else [])
             + (['eda'] if _eda_cr_name is defined else [])
             + (['gateway']))
-           | difference(_import_components) }}
+           | difference(_artifact_import_components) }}
 
     # --- Stage artifact while AAP is still running ---
     - name: Create temporary migration resources
@@ -232,32 +232,32 @@
       ansible.builtin.include_role:
         name: ansible.aap_snapshot.automationcontroller
         tasks_from: import.yml
-      when: "'controller' in _import_components"
+      when: "'controller' in _artifact_import_components"
 
     - name: Import hub
       ansible.builtin.include_role:
         name: ansible.aap_snapshot.automationhub
         tasks_from: import.yml
-      when: "'hub' in _import_components"
+      when: "'hub' in _artifact_import_components"
 
     - name: Import gateway
       ansible.builtin.include_role:
         name: ansible.aap_snapshot.automationgateway
         tasks_from: import.yml
-      when: "'gateway' in _import_components"
+      when: "'gateway' in _artifact_import_components"
 
     - name: Import EDA
       ansible.builtin.include_role:
         name: ansible.aap_snapshot.automationeda
         tasks_from: import.yml
-      when: "'eda' in _import_components"
+      when: "'eda' in _artifact_import_components"
 
     # --- Delete controller migration jobs before scaling operators ---
     - name: Delete controller migration jobs
       ansible.builtin.include_role:
         name: ansible.aap_snapshot.ocp_utils
         tasks_from: delete_controller_migration_jobs.yml
-      when: "'controller' in _import_components"
+      when: "'controller' in _artifact_import_components"
 
     # --- Resume AAP ---
     - name: Scale operators back up
@@ -275,10 +275,9 @@
         ocp_idle_aap: false
 
     # --- Gateway-first reconcile (unblocks operator) ---
-    - name: Set gateway pod facts for early reconcile
+    - name: Record current gateway pod name for restart
       ansible.builtin.set_fact:
-        _ocp_utils_gateway_pod_name: "{{ _ocp_utils_gateway_pods.resources[0].metadata.name }}"
-        _ocp_utils_gateway_container_name: "api"
+        _artifact_gateway_pod_name: "{{ _ocp_utils_gateway_pods.resources[0].metadata.name }}"
 
     - name: Load secret mapping from ocp_utils
       ansible.builtin.include_role:
@@ -303,7 +302,7 @@
       kubernetes.core.k8s:
         kind: Pod
         namespace: "{{ ocp_namespace | default('aap') }}"
-        name: "{{ _ocp_utils_gateway_pod_name }}"
+        name: "{{ _artifact_gateway_pod_name }}"
         state: absent
 
     - name: Wait for new gateway pod
@@ -325,13 +324,13 @@
         container: "{{ _ocp_utils_gateway_container_name }}"
         command: >-
           aap-gateway-manage shell -c "import django; print(django.VERSION[0])"
-      register: _django_version_check
+      register: _artifact_django_version_check
       changed_when: false
       failed_when: false
 
-    - name: Set manage shell args for Django 5.x compatibility
+    - name: Set manage shell args for Django 5.x compatibility  # noqa: var-naming[no-role-prefix]
       ansible.builtin.set_fact:
-        _operations_manage_shell_args: "{{ '--no-imports' if (_django_version_check.stdout_lines | default(['4']) | last | trim | int) >= 5 else '' }}"
+        _operations_manage_shell_args: "{{ '--no-imports' if (_artifact_django_version_check.stdout_lines | default(['4']) | last | trim | int) >= 5 else '' }}"
       delegate_facts: true
       delegate_to: localhost
 
@@ -367,19 +366,19 @@
       ansible.builtin.include_role:
         name: ansible.aap_snapshot.automationcontroller
         tasks_from: reconcile.yml
-      when: "'controller' in _import_components"
+      when: "'controller' in _artifact_import_components"
 
     - name: Reconcile hub
       ansible.builtin.include_role:
         name: ansible.aap_snapshot.automationhub
         tasks_from: reconcile.yml
-      when: "'hub' in _import_components"
+      when: "'hub' in _artifact_import_components"
 
     - name: Reconcile EDA
       ansible.builtin.include_role:
         name: ansible.aap_snapshot.automationeda
         tasks_from: reconcile.yml
-      when: "'eda' in _import_components"
+      when: "'eda' in _artifact_import_components"
 
     - name: Wait for AAP CR to reach ready state
       ansible.builtin.include_role:
@@ -388,7 +387,7 @@
 
     - name: Mark import as succeeded
       ansible.builtin.set_fact:
-        _import_succeeded: true
+        _artifact_import_succeeded: true
 
   rescue:
     - name: Scale operators back up (recovery)
@@ -417,4 +416,4 @@
       ansible.builtin.include_role:
         name: ansible.aap_snapshot.ocp_utils
         tasks_from: cleanup_temp_resources.yml
-      when: (_import_succeeded | default(false) | bool) or not (keep_temp_on_failure | default(true) | bool)
+      when: (_artifact_import_succeeded | default(false) | bool) or not (keep_temp_on_failure | default(true) | bool)
