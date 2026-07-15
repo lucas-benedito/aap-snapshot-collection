@@ -4,6 +4,7 @@
   gather_facts: false
   any_errors_fatal: true
   max_fail_percentage: 0
+  environment: "{{ ocp_utils_ocp_environment | default({}) }}"
   tasks:
     - name: Set Common Groups
       ansible.builtin.include_role:

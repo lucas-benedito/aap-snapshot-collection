@@ -18,7 +18,7 @@
         tasks_from: stop_service.yml
       when:
         - groups.get('eda_groups', []) | length > 0
-        - inventory_hostname == groups['eda_groups'][0]
+        - inventory_hostname in groups.get('eda_groups', [])
 
     - name: Stop hub
       ansible.builtin.include_role:
@@ -26,7 +26,7 @@
         tasks_from: stop_service.yml
       when:
         - groups.get('hub_groups', []) | length > 0
-        - inventory_hostname == groups['hub_groups'][0]
+        - inventory_hostname in groups.get('hub_groups', [])
 
     - name: Stop controller
       ansible.builtin.include_role:
@@ -34,7 +34,7 @@
         tasks_from: stop_service.yml
       when:
         - groups.get('controller_groups', []) | length > 0
-        - inventory_hostname == groups['controller_groups'][0]
+        - inventory_hostname in groups.get('controller_groups', [])
 
     - name: Stop gateway
       ansible.builtin.include_role:
@@ -42,7 +42,7 @@
         tasks_from: stop_service.yml
       when:
         - groups.get('gateway_groups', []) | length > 0
-        - inventory_hostname == groups['gateway_groups'][0]
+        - inventory_hostname in groups.get('gateway_groups', [])
 
     # --- Import databases ---
     - name: Import controller
@@ -84,7 +84,7 @@
         tasks_from: start_service.yml
       when:
         - groups.get('eda_groups', []) | length > 0
-        - inventory_hostname == groups['eda_groups'][0]
+        - inventory_hostname in groups.get('eda_groups', [])
 
     - name: Start hub
       ansible.builtin.include_role:
@@ -92,7 +92,7 @@
         tasks_from: start_service.yml
       when:
         - groups.get('hub_groups', []) | length > 0
-        - inventory_hostname == groups['hub_groups'][0]
+        - inventory_hostname in groups.get('hub_groups', [])
 
     - name: Start controller
       ansible.builtin.include_role:
@@ -100,7 +100,7 @@
         tasks_from: start_service.yml
       when:
         - groups.get('controller_groups', []) | length > 0
-        - inventory_hostname == groups['controller_groups'][0]
+        - inventory_hostname in groups.get('controller_groups', [])
 
     - name: Start gateway
       ansible.builtin.include_role:
@@ -108,7 +108,7 @@
         tasks_from: start_service.yml
       when:
         - groups.get('gateway_groups', []) | length > 0
-        - inventory_hostname == groups['gateway_groups'][0]
+        - inventory_hostname in groups.get('gateway_groups', [])
 
     - name: Start monitoring
       ansible.builtin.include_role:
@@ -317,22 +317,15 @@
         _discover_container_fact: "_ocp_utils_gateway_container_name"
         _discover_container_name: "api"
 
-    - name: Detect Django version for manage shell compatibility
-      kubernetes.core.k8s_exec:
-        namespace: "{{ ocp_namespace | default('aap') }}"
-        pod: "{{ _ocp_utils_gateway_pod_name }}"
-        container: "{{ _ocp_utils_gateway_container_name }}"
-        command: >-
-          aap-gateway-manage shell -c "import django; print(django.VERSION[0])"
-      register: _artifact_django_version_check
-      changed_when: false
-      failed_when: false
-
-    - name: Set manage shell args for Django 5.x compatibility  # noqa: var-naming[no-role-prefix]
-      ansible.builtin.set_fact:
-        _operations_manage_shell_args: "{{ '--no-imports' if (_artifact_django_version_check.stdout_lines | default(['4']) | last | trim | int) >= 5 else '' }}"
-      delegate_facts: true
-      delegate_to: localhost
+    - name: Detect Django version and set manage shell args
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.operations
+        tasks_from: detect_django_version_ocp.yml
+      vars:
+        _component_pod_name: "{{ _ocp_utils_gateway_pod_name }}"
+        _component_container_name: "{{ _ocp_utils_gateway_container_name }}"
+        _operations_detect_manage_cmd: "aap-gateway-manage"
+        operations_ocp_namespace: "{{ ocp_namespace | default('aap') }}"
 
     - name: Reconcile gateway
       ansible.builtin.include_role:
