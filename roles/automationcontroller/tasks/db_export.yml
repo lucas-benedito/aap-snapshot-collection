@@ -5,4 +5,3 @@
     tasks_from: db_export.yml
   vars:
     component_name: "{{ automationcontroller_component_name }}"
-    postgresql_export_dir: "{{ automationcontroller_export_dir }}"

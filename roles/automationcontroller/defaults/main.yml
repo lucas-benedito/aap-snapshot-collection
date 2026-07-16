@@ -1,2 +1,1 @@
 ---
-automationcontroller_export_dir: "{{ postgresql_export_dir }}"
