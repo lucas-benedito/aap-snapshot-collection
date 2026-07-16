@@ -1,0 +1,21 @@
+---
+- name: Detect Django major version via OCP pod
+  kubernetes.core.k8s_exec:
+    namespace: "{{ operations_ocp_namespace }}"
+    pod: "{{ _component_pod_name }}"
+    container: "{{ _component_container_name }}"
+    command: >-
+      {{ _operations_detect_manage_cmd }} shell --no-imports -c
+      "import django; print(django.VERSION[0])"
+  register: _operations_django_version_result
+  changed_when: false
+  failed_when: false
+
+- name: Set manage shell args for Django 5.x compatibility
+  ansible.builtin.set_fact:
+    _operations_manage_shell_args: >-
+      {{ '--no-imports'
+         if (_operations_django_version_result.stdout_lines | default(['4']) | last | trim | int) >= 5
+         else '' }}
+  delegate_facts: true
+  delegate_to: localhost
