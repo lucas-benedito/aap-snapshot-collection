@@ -1,3 +1,0 @@
----
-bugfixes:
-  - Skip import for components not present on the target cluster or missing from the artifact.

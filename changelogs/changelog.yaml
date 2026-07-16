@@ -144,3 +144,48 @@ releases:
     - fix-hub-reconcile-gateway-url.yml
     - fix-import-failure-report.yml
     release_date: '2026-07-07'
+  1.0.5:
+    changes:
+      breaking_changes:
+      - Remove legacy platform-specific playbook subdirectories (``ocp/``, ``rpm/``,
+        ``containerized/``) and standalone dispatcher playbooks (``db_export``, ``start_aap``,
+        ``stop_aap``, ``secrets_dump``). All functionality is covered by the main
+        ``artifact_export`` and ``artifact_import`` playbooks using the unified role-based
+        approach.
+      bugfixes:
+      - Delete controller migration jobs before scaling operators back up during OCP
+        import to prevent the controller operator from waiting on stale jobs from
+        the restored database.
+      - Fix manage command result being lost when the skipped platform task overwrites
+        the registered variable.
+      - Fix orphan instance detection to use OR instead of AND so that imported instances
+        with stale heartbeats are cleaned up even when they still carry their original
+        capacity from the source.
+      - Fix the URL for Pulp repair API call to call the route instead of the service.
+      - Restrict OCP preflight checks to localhost to prevent failures when using
+        a containerized inventory with ``aap_platform=operator``.
+      - Skip import for components not present on the target cluster or missing from
+        the artifact.
+      - automationhub - Wait for the AutomationHub CR API-Ready condition and verify
+        the hub is routable through the gateway envoy proxy before triggering Pulp
+        content repair, preventing 503 errors on slower environments.
+      minor_changes:
+      - Add preflight check that fails early when the artifact file is too large for
+        the configured temp PVC size.
+      - Reduce default temp_pvc_size from 200Gi to 60Gi to avoid over-provisioning
+        on smaller clusters.
+      - automationcontroller - Add ``automationcontroller_export_dir`` variable to
+        configure the remote staging directory for database exports. Defaults to ``postgresql_export_dir``.
+        Users with limited ``/tmp`` space can now point this to a larger filesystem
+        without affecting other components.
+    fragments:
+    - controller-export-dir.yaml
+    - delete-migration-jobs.yaml
+    - fix-orphan-detection-or-condition.yaml
+    - fix-preflight-ocp-localhost-guard.yaml
+    - fix-skip-missing-target-components.yaml
+    - fix-temp-pvc-size-default-and-preflight.yml
+    - fix-update-gateway-api-url.yaml
+    - remove-legacy-playbook-subdirs.yaml
+    - wait-hub-api-ready-before-repair.yaml
+    release_date: '2026-07-16'
