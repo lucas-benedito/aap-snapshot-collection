@@ -16,7 +16,13 @@ jobs:
       - name: Check for changelog fragment
         env:
           BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
         run: |
+          if [[ "$HEAD_REF" == release/* ]]; then
+            echo "Release PR detected -- changelog fragment check skipped."
+            exit 0
+          fi
+
           git fetch origin "$BASE_REF"
           changed=$(git diff --name-only "origin/$BASE_REF"...HEAD)
 
