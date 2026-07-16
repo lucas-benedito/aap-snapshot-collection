@@ -1,5 +1,0 @@
----
-bugfixes:
-  - automationhub - Wait for the AutomationHub CR API-Ready condition and verify
-    the hub is routable through the gateway envoy proxy before triggering Pulp
-    content repair, preventing 503 errors on slower environments.

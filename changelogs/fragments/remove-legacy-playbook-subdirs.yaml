@@ -1,6 +1,0 @@
----
-breaking_changes:
-  - Remove legacy platform-specific playbook subdirectories (``ocp/``, ``rpm/``, ``containerized/``)
-    and standalone dispatcher playbooks (``db_export``, ``start_aap``, ``stop_aap``, ``secrets_dump``).
-    All functionality is covered by the main ``artifact_export`` and ``artifact_import`` playbooks
-    using the unified role-based approach.

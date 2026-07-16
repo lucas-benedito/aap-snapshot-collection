@@ -1,9 +1,0 @@
----
-bugfixes:
-  - >-
-    Fix orphan instance detection to use OR instead of AND so that
-    imported instances with stale heartbeats are cleaned up even when
-    they still carry their original capacity from the source.
-  - >-
-    Fix manage command result being lost when the skipped platform
-    task overwrites the registered variable.
