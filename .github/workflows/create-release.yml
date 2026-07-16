@@ -1,0 +1,49 @@
+---
+# Create a draft GitHub Release when a release PR is merged.
+# Matches PRs from release/* branches with a "Release X.Y.Z" title.
+# When the draft release is published, Zuul builds and publishes the collection.
+name: Create Draft Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.pull_request.merged == true
+      && startsWith(github.event.pull_request.head.ref, 'release/')
+      && startsWith(github.event.pull_request.title, 'Release ')
+    permissions:
+      contents: write
+    steps:
+      - name: Extract and validate version
+        id: version
+        run: |
+          VERSION=$(echo "${{ github.event.pull_request.title }}" | sed 's/^Release //')
+          if ! echo "${VERSION}" | grep -qP '^\d+\.\d+\.\d+(-[a-zA-Z0-9.]+)?$'; then
+            echo "::error::PR title matched but version format is invalid: ${VERSION}"
+            exit 1
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Check for existing tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if gh api "repos/${{ github.repository }}/git/ref/tags/${VERSION}" --silent 2>/dev/null; then
+            echo "::error::Tag ${VERSION} already exists. Delete it before re-releasing."
+            exit 1
+          fi
+
+      - name: Create draft GitHub Release
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228  # v3.0.2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          target_commitish: ${{ github.event.pull_request.merge_commit_sha }}
+          name: ${{ steps.version.outputs.version }}
+          draft: true
+          generate_release_notes: true

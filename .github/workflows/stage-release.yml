@@ -2,8 +2,9 @@
 # Stage a collection release:
 # 1. Stamps version into galaxy.yml
 # 2. Generates changelog via antsibull-changelog
-# 3. Commits and pushes to the branch
-# 4. Creates a draft GitHub Release for review
+# 3. Commits and pushes to a release branch
+# 4. Opens a PR against the target branch for review
+# When the PR is merged, create-release.yml creates a draft GitHub Release.
 # When the draft release is published, Zuul builds and publishes the collection.
 name: Stage Collection Release
 
@@ -20,6 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
     env:
       VERSION: ${{ github.event.inputs.version }}
     steps:
@@ -32,6 +34,13 @@ jobs:
 
       - name: Checkout sources
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7
+
+      - name: Check for existing release branch
+        run: |
+          if git ls-remote --heads origin "release/${VERSION}" | grep -q .; then
+            echo "::error::Branch release/${VERSION} already exists. Delete it first or use a different version."
+            exit 1
+          fi
 
       - name: Setup Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6
@@ -54,25 +63,35 @@ jobs:
       - name: Generate changelog
         run: antsibull-changelog release --version "${VERSION}"
 
-      - name: Commit changelog and version bump
-        id: commit
+      - name: Create release branch and commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "release/${VERSION}"
           git add galaxy.yml CHANGELOG.rst changelogs/
           if git diff --cached --quiet; then
-            echo "No changes to commit -- version may already be set"
-          else
-            git commit -m "Release ${VERSION}"
-            git push origin HEAD:refs/heads/${{ github.ref_name }}
+            echo "::error::No changes to commit -- version may already be set"
+            exit 1
           fi
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          git commit -m "Release ${VERSION}"
+          git push origin "release/${VERSION}"
 
-      - name: Create draft GitHub Release
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228  # v3.0.2
-        with:
-          tag_name: ${{ env.VERSION }}
-          target_commitish: ${{ steps.commit.outputs.sha }}
-          name: ${{ env.VERSION }}
-          draft: true
-          generate_release_notes: true
+      - name: Open pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr create \
+            --base "${{ github.ref_name }}" \
+            --head "release/${VERSION}" \
+            --title "Release ${VERSION}" \
+            --body "## Release ${VERSION}
+
+          Staged by the **Stage Collection Release** workflow.
+
+          ### Changes
+          - Version bumped to \`${VERSION}\` in \`galaxy.yml\`
+          - Changelog generated from fragments via \`antsibull-changelog\`
+
+          ### After merge
+          A draft GitHub Release will be created automatically.
+          Review and **publish** the draft to trigger Zuul collection build."
