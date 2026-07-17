@@ -1,0 +1,7 @@
+---
+minor_changes:
+  - artifact - Add optional S3 and Azure Blob Storage support for artifact
+    upload and download. Set ``artifact_remote_storage`` to ``s3`` or ``azure``
+    to upload the snapshot artifact to a cloud bucket after export and download
+    it before import. Requires the ``amazon.aws`` or ``azure.azcollection``
+    collection and corresponding Python SDKs when enabled.

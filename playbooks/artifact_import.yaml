@@ -26,10 +26,16 @@
   any_errors_fatal: true
   max_fail_percentage: 0
   vars:
-    _artifact_path: "{{ artifact_file }}"
-    artifact_filename: "{{ _artifact_path | basename }}"
-    artifact_dir: "{{ _artifact_path | dirname or lookup('env', 'PWD') }}"
+    _artifact_path: "{{ artifact_file | default('') }}"
+    artifact_filename: "{{ _artifact_path | basename if (_artifact_path | length > 0) else '' }}"
+    artifact_dir: "{{ _artifact_path | dirname if (_artifact_path | length > 0) else lookup('env', 'PWD') }}"
   tasks:
+    - name: Download artifact from remote storage
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.artifact
+        tasks_from: download.yml
+      when: artifact_remote_storage | default('') | length > 0
+
     - name: Extract and validate artifact
       ansible.builtin.include_role:
         name: ansible.aap_snapshot.artifact

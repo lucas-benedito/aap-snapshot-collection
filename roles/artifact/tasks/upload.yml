@@ -1,0 +1,24 @@
+---
+- name: Upload artifact to remote storage
+  when: artifact_remote_storage | default('') | length > 0
+  block:
+    - name: Validate remote storage backend
+      ansible.builtin.assert:
+        that: artifact_remote_storage in ['s3', 'azure']
+        fail_msg: >-
+          Unsupported artifact_remote_storage '{{ artifact_remote_storage }}'.
+          Supported values: 's3', 'azure'.
+
+    - name: Set artifact file paths for upload
+      ansible.builtin.set_fact:
+        _artifact_upload_file: "{{ __artifact_dest_dir }}/{{ __artifact_filename }}"
+        _artifact_upload_checksum_file: "{{ __artifact_dest_dir }}/{{ __artifact_filename }}.{{ artifact_checksum_algo }}"
+
+    - name: Upload artifact to S3
+      ansible.builtin.include_tasks: upload_s3.yml
+      when: artifact_remote_storage == 's3'
+
+    - name: Upload artifact to Azure Blob Storage
+      ansible.builtin.include_tasks: upload_azure.yml
+      when: artifact_remote_storage == 'azure'
+...

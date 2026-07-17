@@ -1,0 +1,46 @@
+---
+- name: Validate Azure Blob settings
+  ansible.builtin.assert:
+    that:
+      - artifact_azure_resource_group | length > 0
+      - artifact_azure_storage_account | length > 0
+      - artifact_azure_container | length > 0
+      - artifact_azure_blob | length > 0
+    fail_msg: >-
+      artifact_azure_resource_group, artifact_azure_storage_account,
+      artifact_azure_container, and artifact_azure_blob are required
+      when downloading from Azure.
+
+- name: Set Azure checksum blob name
+  ansible.builtin.set_fact:
+    _artifact_azure_checksum_blob: "{{ artifact_azure_blob }}.{{ artifact_checksum_algo }}"
+
+- name: Set download file paths
+  ansible.builtin.set_fact:
+    _artifact_downloaded_file: "{{ _artifact_download_dir }}/{{ artifact_azure_blob | basename }}"
+    _artifact_downloaded_checksum_file: >-
+      {{ _artifact_download_dir }}/{{ artifact_azure_blob | basename }}.{{ artifact_checksum_algo }}
+
+- name: Download artifact checksum from Azure Blob Storage
+  azure.azcollection.azure_rm_storageblob:
+    resource_group: "{{ artifact_azure_resource_group }}"
+    storage_account_name: "{{ artifact_azure_storage_account }}"
+    container: "{{ artifact_azure_container }}"
+    blob: "{{ _artifact_azure_checksum_blob }}"
+    dest: "{{ _artifact_downloaded_checksum_file }}"
+
+- name: Download artifact from Azure Blob Storage
+  azure.azcollection.azure_rm_storageblob:
+    resource_group: "{{ artifact_azure_resource_group }}"
+    storage_account_name: "{{ artifact_azure_storage_account }}"
+    container: "{{ artifact_azure_container }}"
+    blob: "{{ artifact_azure_blob }}"
+    dest: "{{ _artifact_downloaded_file }}"
+
+- name: Report Azure download location
+  ansible.builtin.debug:
+    msg: >-
+      Artifact downloaded from
+      https://{{ artifact_azure_storage_account }}.blob.core.windows.net/{{ artifact_azure_container }}/{{ artifact_azure_blob }}
+      to {{ _artifact_downloaded_file }}
+...

@@ -1,0 +1,51 @@
+---
+- name: Download artifact from remote storage
+  when: artifact_remote_storage | default('') | length > 0
+  block:
+    - name: Validate remote storage backend
+      ansible.builtin.assert:
+        that: artifact_remote_storage in ['s3', 'azure']
+        fail_msg: >-
+          Unsupported artifact_remote_storage '{{ artifact_remote_storage }}'.
+          Supported values: 's3', 'azure'.
+
+    - name: Set download destination directory
+      ansible.builtin.set_fact:
+        _artifact_download_dir: "{{ artifact_dir }}"
+
+    - name: Download artifact from S3
+      ansible.builtin.include_tasks: download_s3.yml
+      when: artifact_remote_storage == 's3'
+
+    - name: Download artifact from Azure Blob Storage
+      ansible.builtin.include_tasks: download_azure.yml
+      when: artifact_remote_storage == 'azure'
+
+    - name: Verify downloaded artifact checksum
+      ansible.builtin.stat:
+        path: "{{ _artifact_downloaded_file }}"
+        checksum_algorithm: "{{ artifact_checksum_algo }}"
+      register: _artifact_download_stat
+
+    - name: Read expected checksum
+      ansible.builtin.slurp:
+        src: "{{ _artifact_downloaded_checksum_file }}"
+      register: _artifact_expected_checksum
+
+    - name: Assert checksum matches
+      ansible.builtin.assert:
+        that: >-
+          _artifact_download_stat.stat.checksum ==
+          (_artifact_expected_checksum.content | b64decode | split(' ') | first | trim)
+        fail_msg: >-
+          Checksum mismatch for downloaded artifact.
+          Expected: {{ (_artifact_expected_checksum.content | b64decode | split(' ') | first | trim) }},
+          Got: {{ _artifact_download_stat.stat.checksum }}.
+
+    - name: Set artifact_file to downloaded path
+      ansible.builtin.set_fact:
+        artifact_file: "{{ _artifact_downloaded_file }}"
+        _artifact_path: "{{ _artifact_downloaded_file }}"
+        artifact_filename: "{{ _artifact_downloaded_file | basename }}"
+        artifact_dir: "{{ _artifact_downloaded_file | dirname }}"
+...

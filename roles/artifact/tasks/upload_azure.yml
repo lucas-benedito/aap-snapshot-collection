@@ -1,0 +1,43 @@
+---
+- name: Validate Azure Blob settings
+  ansible.builtin.assert:
+    that:
+      - artifact_azure_resource_group | length > 0
+      - artifact_azure_storage_account | length > 0
+      - artifact_azure_container | length > 0
+    fail_msg: >-
+      artifact_azure_resource_group, artifact_azure_storage_account,
+      and artifact_azure_container are required when
+      artifact_remote_storage is 'azure'.
+
+- name: Set Azure blob name
+  ansible.builtin.set_fact:
+    _artifact_azure_blob: >-
+      {{ artifact_azure_blob if (artifact_azure_blob | length > 0)
+         else __artifact_filename }}
+    _artifact_azure_checksum_blob: >-
+      {{ (artifact_azure_blob if (artifact_azure_blob | length > 0)
+          else __artifact_filename) ~ '.' ~ artifact_checksum_algo }}
+
+- name: Upload artifact to Azure Blob Storage
+  azure.azcollection.azure_rm_storageblob:
+    resource_group: "{{ artifact_azure_resource_group }}"
+    storage_account_name: "{{ artifact_azure_storage_account }}"
+    container: "{{ artifact_azure_container }}"
+    blob: "{{ _artifact_azure_blob }}"
+    src: "{{ _artifact_upload_file }}"
+
+- name: Upload artifact checksum to Azure Blob Storage
+  azure.azcollection.azure_rm_storageblob:
+    resource_group: "{{ artifact_azure_resource_group }}"
+    storage_account_name: "{{ artifact_azure_storage_account }}"
+    container: "{{ artifact_azure_container }}"
+    blob: "{{ _artifact_azure_checksum_blob }}"
+    src: "{{ _artifact_upload_checksum_file }}"
+
+- name: Report Azure upload location
+  ansible.builtin.debug:
+    msg: >-
+      Artifact uploaded to
+      https://{{ artifact_azure_storage_account }}.blob.core.windows.net/{{ artifact_azure_container }}/{{ _artifact_azure_blob }}
+...

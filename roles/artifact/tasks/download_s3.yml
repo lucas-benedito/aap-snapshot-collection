@@ -1,0 +1,47 @@
+---
+- name: Validate S3 settings
+  ansible.builtin.assert:
+    that:
+      - artifact_s3_bucket | length > 0
+      - artifact_s3_object | length > 0
+    fail_msg: >-
+      artifact_s3_bucket and artifact_s3_object are required
+      when downloading from S3.
+
+- name: Set S3 checksum object key
+  ansible.builtin.set_fact:
+    _artifact_s3_checksum_object: "{{ artifact_s3_object }}.{{ artifact_checksum_algo }}"
+
+- name: Set download file paths
+  ansible.builtin.set_fact:
+    _artifact_downloaded_file: "{{ _artifact_download_dir }}/{{ artifact_s3_object | basename }}"
+    _artifact_downloaded_checksum_file: >-
+      {{ _artifact_download_dir }}/{{ artifact_s3_object | basename }}.{{ artifact_checksum_algo }}
+
+- name: Download artifact checksum from S3
+  amazon.aws.s3_object:
+    bucket: "{{ artifact_s3_bucket }}"
+    object: "{{ _artifact_s3_checksum_object }}"
+    dest: "{{ _artifact_downloaded_checksum_file }}"
+    mode: get
+    region: "{{ artifact_s3_region if (artifact_s3_region | length > 0) else omit }}"
+    endpoint_url: "{{ artifact_s3_endpoint_url if (artifact_s3_endpoint_url | length > 0) else omit }}"
+    profile: "{{ artifact_s3_profile if (artifact_s3_profile | length > 0) else omit }}"
+
+- name: Download artifact from S3
+  amazon.aws.s3_object:
+    bucket: "{{ artifact_s3_bucket }}"
+    object: "{{ artifact_s3_object }}"
+    dest: "{{ _artifact_downloaded_file }}"
+    mode: get
+    overwrite: different
+    region: "{{ artifact_s3_region if (artifact_s3_region | length > 0) else omit }}"
+    endpoint_url: "{{ artifact_s3_endpoint_url if (artifact_s3_endpoint_url | length > 0) else omit }}"
+    profile: "{{ artifact_s3_profile if (artifact_s3_profile | length > 0) else omit }}"
+
+- name: Report S3 download location
+  ansible.builtin.debug:
+    msg: >-
+      Artifact downloaded from s3://{{ artifact_s3_bucket }}/{{ artifact_s3_object }}
+      to {{ _artifact_downloaded_file }}
+...

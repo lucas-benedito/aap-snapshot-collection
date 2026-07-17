@@ -1,0 +1,52 @@
+---
+- name: Validate S3 settings
+  ansible.builtin.assert:
+    that:
+      - artifact_s3_bucket | length > 0
+    fail_msg: >-
+      artifact_s3_bucket is required when artifact_remote_storage is 's3'.
+
+- name: Set S3 object key
+  ansible.builtin.set_fact:
+    _artifact_s3_object: >-
+      {{ artifact_s3_object if (artifact_s3_object | length > 0)
+         else __artifact_filename }}
+    _artifact_s3_checksum_object: >-
+      {{ (artifact_s3_object if (artifact_s3_object | length > 0)
+          else __artifact_filename) ~ '.' ~ artifact_checksum_algo }}
+
+- name: Build S3 connection parameters
+  ansible.builtin.set_fact:
+    _artifact_s3_params: >-
+      {{
+        {'bucket': artifact_s3_bucket}
+        | combine({'region': artifact_s3_region} if (artifact_s3_region | length > 0) else {})
+        | combine({'endpoint_url': artifact_s3_endpoint_url} if (artifact_s3_endpoint_url | length > 0) else {})
+        | combine({'profile': artifact_s3_profile} if (artifact_s3_profile | length > 0) else {})
+      }}
+
+- name: Upload artifact to S3
+  amazon.aws.s3_object:
+    bucket: "{{ _artifact_s3_params.bucket }}"
+    object: "{{ _artifact_s3_object }}"
+    src: "{{ _artifact_upload_file }}"
+    mode: put
+    region: "{{ _artifact_s3_params.region | default(omit) }}"
+    endpoint_url: "{{ _artifact_s3_params.endpoint_url | default(omit) }}"
+    profile: "{{ _artifact_s3_params.profile | default(omit) }}"
+
+- name: Upload artifact checksum to S3
+  amazon.aws.s3_object:
+    bucket: "{{ _artifact_s3_params.bucket }}"
+    object: "{{ _artifact_s3_checksum_object }}"
+    src: "{{ _artifact_upload_checksum_file }}"
+    mode: put
+    region: "{{ _artifact_s3_params.region | default(omit) }}"
+    endpoint_url: "{{ _artifact_s3_params.endpoint_url | default(omit) }}"
+    profile: "{{ _artifact_s3_params.profile | default(omit) }}"
+
+- name: Report S3 upload location
+  ansible.builtin.debug:
+    msg: >-
+      Artifact uploaded to s3://{{ artifact_s3_bucket }}/{{ _artifact_s3_object }}
+...

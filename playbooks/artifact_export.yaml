@@ -49,5 +49,17 @@
         name: ansible.aap_snapshot.artifact
         tasks_from: package.yml
 
+- name: Upload artifact to remote storage
+  hosts: localhost
+  gather_facts: false
+  any_errors_fatal: true
+  max_fail_percentage: 0
+  tasks:
+    - name: Upload artifact to remote storage
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.artifact
+        tasks_from: upload.yml
+      when: artifact_remote_storage | default('') | length > 0
+
 - name: Validate artifact
   ansible.builtin.import_playbook: common/validate_artifact.yaml

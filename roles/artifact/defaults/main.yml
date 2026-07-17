@@ -21,6 +21,23 @@ artifact_postgresql_db_type: 'managed'
 artifact_build_dir: '{{ lookup("env", "PWD") }}/artifact'
 __artifact_build_dir: '{{ artifact_build_dir.rstrip("/") }}'
 artifact_checksum_algo: 'sha256'
+
+### remote storage (optional - upload/download artifact to/from cloud storage)
+artifact_remote_storage: ''  # '', 's3', or 'azure'
+
+# S3 settings (when artifact_remote_storage == 's3')
+artifact_s3_bucket: ''
+artifact_s3_object: ''  # defaults to artifact filename if empty
+artifact_s3_region: ''
+artifact_s3_endpoint_url: ''  # for MinIO or S3-compatible storage
+artifact_s3_profile: ''
+
+# Azure Blob settings (when artifact_remote_storage == 'azure')
+artifact_azure_resource_group: ''
+artifact_azure_storage_account: ''
+artifact_azure_container: ''
+artifact_azure_blob: ''  # defaults to artifact filename if empty
+
 artifact_dest_dir: '{{ lookup("env", "PWD") }}'
 __artifact_dest_dir: '{{ artifact_dest_dir.rstrip("/") }}'
 artifact_prefix: 'aap-snapshot'
