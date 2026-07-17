@@ -7,7 +7,7 @@ see [artifact-format.md](artifact-format.md).
 ## Export Workflow
 
 **Playbook:** `artifact_export.yaml`
-**Supported platforms:** RPM, containerized, OCP
+**Supported platforms:** RPM (containerized and OCP: planned)
 
 ### Phase 1: Preflight
 
