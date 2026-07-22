@@ -1,4 +1,6 @@
 ---
+__ocp_utils_no_log: "{{ not (disable_no_log | default(false) | bool) }}"
+
 # Kubeconfig resolution: -e kubeconfig=/path > K8S_AUTH_KUBECONFIG > KUBECONFIG > default (~/.kube/config)
 __ocp_utils_resolved_kubeconfig: >-
   {{ kubeconfig
