@@ -223,6 +223,52 @@
               + groups.get('gateway_groups', [])
               + groups.get('hub_groups', []))
 
+  rescue:
+    - name: Start EDA (recovery)
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationeda
+        tasks_from: start_service.yml
+      when:
+        - groups.get('eda_groups', []) | length > 0
+        - inventory_hostname in groups.get('eda_groups', [])
+
+    - name: Start hub (recovery)
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationhub
+        tasks_from: start_service.yml
+      when:
+        - groups.get('hub_groups', []) | length > 0
+        - inventory_hostname in groups.get('hub_groups', [])
+
+    - name: Start controller (recovery)
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationcontroller
+        tasks_from: start_service.yml
+      when:
+        - groups.get('controller_groups', []) | length > 0
+        - inventory_hostname in groups.get('controller_groups', [])
+
+    - name: Start gateway (recovery)
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationgateway
+        tasks_from: start_service.yml
+      when:
+        - groups.get('gateway_groups', []) | length > 0
+        - inventory_hostname in groups.get('gateway_groups', [])
+
+    - name: Report import failure
+      ansible.builtin.fail:
+        msg: >-
+          Import failed. Services have been restarted.
+          Failed task: {{ ansible_failed_task.name | default('unknown') }}.
+          Error: {{ ansible_failed_result.msg | default(ansible_failed_result | to_nice_json) }}
+
+  always:
+    - name: Clean up staged artifact files
+      ansible.builtin.file:
+        path: "{{ __operations_staging_restore_dir }}"
+        state: absent
+
 - name: Consume artifact (OCP)
   when: aap_platform == 'operator'
   block:

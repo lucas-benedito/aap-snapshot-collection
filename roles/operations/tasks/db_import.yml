@@ -20,6 +20,15 @@
   delegate_to: "{{ groups['database'][0] | default(inventory_hostname) }}"
   when: aap_platform == 'containerized'
 
+- name: Assert PostgreSQL container was found
+  ansible.builtin.assert:
+    that: _operations_pg_container_info.containers | length > 0
+    fail_msg: >-
+      No container named 'postgresql' found on
+      {{ groups['database'][0] | default(inventory_hostname) }}.
+      Set snapshot_postgresql_image to specify the image manually.
+  when: aap_platform == 'containerized'
+
 - name: "Restore database"
   ansible.builtin.include_role:
     name: ansible.aap_snapshot.postgresql
@@ -33,5 +42,5 @@
     postgresql_restore_admin_password: "{{ _operations_db_admin_password }}"
     postgresql_restore_dbname: "{{ _operations_db_name | default(component_name) }}"
     postgresql_restore_source: "{{ __operations_artifact_extract_dir }}/{{ component_name }}/{{ component_name }}.pgc"
-    postgresql_restore_image: "{{ _operations_pg_container_info.containers[0].ImageName | default('') }}"
+    postgresql_restore_image: "{{ (_operations_pg_container_info.containers | first).ImageName | default(snapshot_postgresql_image | default('')) }}"
     postgresql_restore_staging_dir: "{{ _operations_staged_restore_dir | default('') }}"

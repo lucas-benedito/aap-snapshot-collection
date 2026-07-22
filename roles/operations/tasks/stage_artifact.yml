@@ -1,15 +1,17 @@
 ---
 - name: Create staging directory on remote host
   ansible.builtin.file:
-    path: "/tmp/aap-snapshot-restore/{{ component_name }}"
+    path: "{{ __operations_staging_restore_dir }}/{{ component_name }}"
     state: directory
-    mode: '0755'
+    mode: '0700'
 
 - name: Transfer artifact to remote host
   ansible.posix.synchronize:
     src: "{{ __operations_artifact_extract_dir }}/{{ component_name }}/{{ component_name }}.pgc"
-    dest: "/tmp/aap-snapshot-restore/{{ component_name }}/{{ component_name }}.pgc"
+    dest: "{{ __operations_staging_restore_dir }}/{{ component_name }}/{{ component_name }}.pgc"
+    rsync_opts:
+      - "--chmod=F0600"
 
 - name: Set staged restore path
   ansible.builtin.set_fact:
-    _operations_staged_restore_dir: "/tmp/aap-snapshot-restore"
+    _operations_staged_restore_dir: "{{ __operations_staging_restore_dir }}"

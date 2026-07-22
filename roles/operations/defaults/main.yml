@@ -2,6 +2,7 @@
 __operations_no_log: "{{ (disable__no_log | default(false) | bool) | ternary(false, true) }}"
 
 __operations_artifact_extract_dir: "{{ artifact_dir }}/artifact"
+__operations_staging_restore_dir: "/tmp/aap-snapshot-restore"
 
 operations_ocp_namespace: "{{ ocp_namespace | default('aap') }}"
 operations_aap_instance_name: "{{ aap_instance_name | default('aap') }}"

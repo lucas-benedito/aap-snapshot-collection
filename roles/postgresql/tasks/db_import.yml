@@ -30,6 +30,7 @@
       containers.podman.podman_container_exec:
         name: "aap-snapshot-restore-{{ postgresql_component_name }}"
         command: >-
+          timeout {{ postgresql_restore_timeout }}
           pg_restore --clean --if-exists --no-owner
           -h {{ postgresql_restore_host }}
           -p {{ postgresql_restore_port }}
@@ -40,9 +41,7 @@
           PGPASSWORD: "{{ postgresql_restore_password }}"
       no_log: "{{ (disable_no_log | default(false) | bool) | ternary(false, true) }}"
       register: _postgresql_restore_result
-      failed_when: >-
-        _postgresql_restore_result.rc != 0
-        and 'FATAL' in (_postgresql_restore_result.stderr | default(''))
+      failed_when: _postgresql_restore_result.rc != 0
 
   always:
     - name: "Revoke CREATEDB from restore user"
