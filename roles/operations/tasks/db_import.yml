@@ -1,25 +1,37 @@
 ---
-- name: Restore database (containerized)
-  ansible.builtin.include_tasks: restore_db_container.yml
+- name: Set component config
+  ansible.builtin.set_fact:
+    _operations_current_component: "{{ _operations_component_config[component_name] }}"
+
+- name: Set DB credentials from pre-discovered store
+  ansible.builtin.set_fact:
+    _operations_db_host: "{{ _artifact_db_credentials[component_name].host }}"
+    _operations_db_port: "{{ _artifact_db_credentials[component_name].port }}"
+    _operations_db_user: "{{ _artifact_db_credentials[component_name].user }}"
+    _operations_db_password: "{{ _artifact_db_credentials[component_name].password }}"
+    _operations_db_admin_password: "{{ _artifact_db_credentials[component_name].admin_password }}"
+  no_log: "{{ __operations_no_log }}"
+  when: _artifact_db_credentials is defined and component_name in _artifact_db_credentials
+
+- name: Discover PostgreSQL container image
+  containers.podman.podman_container_info:
+    name: postgresql
+  register: _operations_pg_container_info
+  delegate_to: "{{ groups['database'][0] | default(inventory_hostname) }}"
   when: aap_platform == 'containerized'
 
-- name: Restore database (OCP)
-  when: aap_platform == 'operator'
-  block:
-    - name: Set component config
-      ansible.builtin.set_fact:
-        _operations_current_component: "{{ _operations_component_config[component_name] }}"
-
-    - name: "Restore database"
-      ansible.builtin.include_role:
-        name: ansible.aap_snapshot.postgresql
-        tasks_from: db_import.yml
-      vars:
-        postgresql_component_name: "{{ component_name }}"
-        postgresql_restore_host: "{{ _operations_db_host }}"
-        postgresql_restore_port: "{{ _operations_db_port }}"
-        postgresql_restore_user: "{{ _operations_db_user }}"
-        postgresql_restore_password: "{{ _operations_db_password }}"
-        postgresql_restore_admin_password: "{{ _operations_db_admin_password }}"
-        postgresql_restore_dbname: "{{ _operations_db_name | default(component_name) }}"
-        postgresql_restore_source: "{{ __operations_artifact_extract_dir }}/{{ component_name }}/{{ component_name }}.pgc"
+- name: "Restore database"
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.postgresql
+    tasks_from: db_import.yml
+  vars:
+    postgresql_component_name: "{{ component_name }}"
+    postgresql_restore_host: "{{ _operations_db_host }}"
+    postgresql_restore_port: "{{ _operations_db_port }}"
+    postgresql_restore_user: "{{ _operations_db_user }}"
+    postgresql_restore_password: "{{ _operations_db_password }}"
+    postgresql_restore_admin_password: "{{ _operations_db_admin_password }}"
+    postgresql_restore_dbname: "{{ _operations_db_name | default(component_name) }}"
+    postgresql_restore_source: "{{ __operations_artifact_extract_dir }}/{{ component_name }}/{{ component_name }}.pgc"
+    postgresql_restore_image: "{{ _operations_pg_container_info.containers[0].ImageName | default('') }}"
+    postgresql_restore_staging_dir: "{{ _operations_staged_restore_dir | default('') }}"

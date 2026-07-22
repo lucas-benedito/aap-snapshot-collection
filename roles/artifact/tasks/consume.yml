@@ -3,116 +3,38 @@
   when: aap_platform == 'containerized'
   block:
     # --- Discover DB credentials (before stopping services) ---
-    # Credentials must be gathered while component containers are running.
-    # Each call overwrites _operations_db_* facts, so we save per-component.
     - name: Initialize DB credentials store
       ansible.builtin.set_fact:
         _artifact_db_credentials: {}
 
-    - name: Get controller DB credentials
-      ansible.builtin.include_role:
-        name: ansible.aap_snapshot.operations
-        tasks_from: get_db_credentials.yml
+    - name: Discover controller DB credentials
+      ansible.builtin.include_tasks: "{{ role_path }}/../operations/tasks/discover_db_credentials.yml"
       vars:
-        component_name: "{{ automationcontroller_component_name }}"
+        _discover_component_name: "{{ automationcontroller_component_name }}"
       when:
         - groups.get('controller_groups', []) | length > 0
         - inventory_hostname == groups['controller_groups'][0]
 
-    - name: Save controller DB credentials
-      ansible.builtin.set_fact:
-        _artifact_db_credentials: >-
-          {{ _artifact_db_credentials | combine({
-            'controller': {
-              'host': _operations_db_host,
-              'port': _operations_db_port,
-              'user': _operations_db_user,
-              'password': _operations_db_password,
-              'admin_password': _operations_db_admin_password
-            }
-          }) }}
-      no_log: true
-      when:
-        - groups.get('controller_groups', []) | length > 0
-        - inventory_hostname == groups['controller_groups'][0]
-
-    - name: Get hub DB credentials
-      ansible.builtin.include_role:
-        name: ansible.aap_snapshot.operations
-        tasks_from: get_db_credentials.yml
+    - name: Discover hub DB credentials
+      ansible.builtin.include_tasks: "{{ role_path }}/../operations/tasks/discover_db_credentials.yml"
       vars:
-        component_name: "{{ automationhub_component_name }}"
+        _discover_component_name: "{{ automationhub_component_name }}"
       when:
         - groups.get('hub_groups', []) | length > 0
         - inventory_hostname == groups['hub_groups'][0]
 
-    - name: Save hub DB credentials
-      ansible.builtin.set_fact:
-        _artifact_db_credentials: >-
-          {{ _artifact_db_credentials | combine({
-            'hub': {
-              'host': _operations_db_host,
-              'port': _operations_db_port,
-              'user': _operations_db_user,
-              'password': _operations_db_password,
-              'admin_password': _operations_db_admin_password
-            }
-          }) }}
-      no_log: true
-      when:
-        - groups.get('hub_groups', []) | length > 0
-        - inventory_hostname == groups['hub_groups'][0]
-
-    - name: Get gateway DB credentials
-      ansible.builtin.include_role:
-        name: ansible.aap_snapshot.operations
-        tasks_from: get_db_credentials.yml
+    - name: Discover gateway DB credentials
+      ansible.builtin.include_tasks: "{{ role_path }}/../operations/tasks/discover_db_credentials.yml"
       vars:
-        component_name: "{{ automationgateway_component_name }}"
+        _discover_component_name: "{{ automationgateway_component_name }}"
       when:
         - groups.get('gateway_groups', []) | length > 0
         - inventory_hostname == groups['gateway_groups'][0]
 
-    - name: Save gateway DB credentials
-      ansible.builtin.set_fact:
-        _artifact_db_credentials: >-
-          {{ _artifact_db_credentials | combine({
-            'gateway': {
-              'host': _operations_db_host,
-              'port': _operations_db_port,
-              'user': _operations_db_user,
-              'password': _operations_db_password,
-              'admin_password': _operations_db_admin_password
-            }
-          }) }}
-      no_log: true
-      when:
-        - groups.get('gateway_groups', []) | length > 0
-        - inventory_hostname == groups['gateway_groups'][0]
-
-    - name: Get EDA DB credentials
-      ansible.builtin.include_role:
-        name: ansible.aap_snapshot.operations
-        tasks_from: get_db_credentials.yml
+    - name: Discover EDA DB credentials
+      ansible.builtin.include_tasks: "{{ role_path }}/../operations/tasks/discover_db_credentials.yml"
       vars:
-        component_name: "{{ automationeda_component_name }}"
-      when:
-        - groups.get('eda_groups', []) | length > 0
-        - inventory_hostname == groups['eda_groups'][0]
-
-    - name: Save EDA DB credentials
-      ansible.builtin.set_fact:
-        _artifact_db_credentials: >-
-          {{ _artifact_db_credentials | combine({
-            'eda': {
-              'host': _operations_db_host,
-              'port': _operations_db_port,
-              'user': _operations_db_user,
-              'password': _operations_db_password,
-              'admin_password': _operations_db_admin_password
-            }
-          }) }}
-      no_log: true
+        _discover_component_name: "{{ automationeda_component_name }}"
       when:
         - groups.get('eda_groups', []) | length > 0
         - inventory_hostname == groups['eda_groups'][0]
