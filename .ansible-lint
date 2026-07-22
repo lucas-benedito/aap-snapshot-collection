@@ -18,7 +18,3 @@ enable_list:
   - custom-play-boilerplate
 warn_list:
   - no-log-password
-  # Custom rules - warn until existing violations are fixed
-  - custom-no-log
-  - custom-loop-control
-  - custom-play-boilerplate
