@@ -71,3 +71,4 @@
   loop: "{{ _ocp_utils_aap_cr_components }}"
   loop_control:
     label: "{{ item }}"
+...

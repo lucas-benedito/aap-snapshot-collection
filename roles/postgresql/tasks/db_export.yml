@@ -157,3 +157,4 @@
     - name: Print DB checksum
       ansible.builtin.debug:
         msg: "{{ _postgresql_db_checksum }}"
+...

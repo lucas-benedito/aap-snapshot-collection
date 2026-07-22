@@ -15,3 +15,4 @@ postgresql_export_extension: "pgc"
 # Import variables
 postgresql_restore_admin_user: "postgres"
 postgresql_restore_timeout: 3600
+...

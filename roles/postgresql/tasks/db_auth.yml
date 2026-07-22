@@ -91,3 +91,4 @@
   when:
     - postgresql_auth_settings.default.OPTIONS.sslcert is defined
     - postgresql_auth_settings.default.OPTIONS.sslkey is defined
+...

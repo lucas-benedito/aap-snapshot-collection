@@ -200,3 +200,4 @@
       when:
         - groups.get('eda_groups', []) | length > 0
         - inventory_hostname == groups['eda_groups'][0]
+...

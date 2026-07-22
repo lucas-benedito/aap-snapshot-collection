@@ -42,3 +42,4 @@
   loop: "{{ ansible_play_hosts }}"
   loop_control:
     label: "{{ item }}"
+...

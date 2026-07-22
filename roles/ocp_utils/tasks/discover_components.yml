@@ -240,3 +240,4 @@
   when:
     - _hub_cr_name is defined
     - _ocp_utils_found_hub_pods.resources | default([]) | length > 0
+...

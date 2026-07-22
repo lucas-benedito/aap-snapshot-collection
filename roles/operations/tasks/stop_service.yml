@@ -47,3 +47,4 @@
            + _operations_current_component.static_services }}
       loop_control:
         label: "{{ item }}"
+...

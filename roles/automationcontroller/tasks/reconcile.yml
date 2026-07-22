@@ -138,3 +138,4 @@
     - (_automationcontroller_ee_dest_hub | default('')) | length > 0
     - _automationcontroller_ee_source_hub != _automationcontroller_ee_dest_hub
     - _automationcontroller_ee_list.json is defined
+...

@@ -61,3 +61,4 @@ __ocp_utils_artifact_secret_mapping:
     secret_name: "{{ ocp_utils_aap_instance_name }}-eda-db-fields-encryption-secret"
     field: "secret_key"
     artifact_key: "eda_secret_key"
+...
