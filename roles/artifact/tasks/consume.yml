@@ -8,7 +8,9 @@
         _artifact_db_credentials: {}
 
     - name: Discover controller DB credentials
-      ansible.builtin.include_tasks: "{{ role_path }}/../operations/tasks/discover_db_credentials.yml"
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.operations
+        tasks_from: discover_db_credentials.yml
       vars:
         _discover_component_name: "{{ automationcontroller_component_name }}"
       when:
@@ -16,7 +18,9 @@
         - inventory_hostname == groups['controller_groups'][0]
 
     - name: Discover hub DB credentials
-      ansible.builtin.include_tasks: "{{ role_path }}/../operations/tasks/discover_db_credentials.yml"
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.operations
+        tasks_from: discover_db_credentials.yml
       vars:
         _discover_component_name: "{{ automationhub_component_name }}"
       when:
@@ -24,7 +28,9 @@
         - inventory_hostname == groups['hub_groups'][0]
 
     - name: Discover gateway DB credentials
-      ansible.builtin.include_tasks: "{{ role_path }}/../operations/tasks/discover_db_credentials.yml"
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.operations
+        tasks_from: discover_db_credentials.yml
       vars:
         _discover_component_name: "{{ automationgateway_component_name }}"
       when:
@@ -32,7 +38,9 @@
         - inventory_hostname == groups['gateway_groups'][0]
 
     - name: Discover EDA DB credentials
-      ansible.builtin.include_tasks: "{{ role_path }}/../operations/tasks/discover_db_credentials.yml"
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.operations
+        tasks_from: discover_db_credentials.yml
       vars:
         _discover_component_name: "{{ automationeda_component_name }}"
       when:
