@@ -159,6 +159,47 @@
         - groups.get('gateway_groups', []) | length > 0
         - inventory_hostname in groups.get('gateway_groups', [])
 
+    # --- Stage artifact files to component hosts ---
+    - name: Stage controller artifact
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.operations
+        tasks_from: stage_artifact.yml
+      vars:
+        component_name: "{{ automationcontroller_component_name }}"
+      when:
+        - groups.get('controller_groups', []) | length > 0
+        - inventory_hostname == groups['controller_groups'][0]
+
+    - name: Stage hub artifact
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.operations
+        tasks_from: stage_artifact.yml
+      vars:
+        component_name: "{{ automationhub_component_name }}"
+      when:
+        - groups.get('hub_groups', []) | length > 0
+        - inventory_hostname == groups['hub_groups'][0]
+
+    - name: Stage gateway artifact
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.operations
+        tasks_from: stage_artifact.yml
+      vars:
+        component_name: "{{ automationgateway_component_name }}"
+      when:
+        - groups.get('gateway_groups', []) | length > 0
+        - inventory_hostname == groups['gateway_groups'][0]
+
+    - name: Stage EDA artifact
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.operations
+        tasks_from: stage_artifact.yml
+      vars:
+        component_name: "{{ automationeda_component_name }}"
+      when:
+        - groups.get('eda_groups', []) | length > 0
+        - inventory_hostname == groups['eda_groups'][0]
+
     # --- Import databases ---
     - name: Import controller
       ansible.builtin.include_role:

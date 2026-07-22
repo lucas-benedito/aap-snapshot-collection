@@ -1,12 +1,7 @@
 ---
-- name: Stage and restore database (containerized)
+- name: Restore database (containerized)
+  ansible.builtin.include_tasks: restore_db_container.yml
   when: aap_platform == 'containerized'
-  block:
-    - name: Stage artifact files to remote host
-      ansible.builtin.include_tasks: stage_artifact.yml
-
-    - name: Restore database via temp container
-      ansible.builtin.include_tasks: restore_db_container.yml
 
 - name: Restore database (OCP)
   when: aap_platform == 'operator'
