@@ -11,9 +11,10 @@ _automationgateway_cleanup_ocp_script: >-
   MigrateServiceDataHasRan.mark_migration_not_completed()
 
 _automationgateway_cleanup_containerized_script: >-
-  from aap_gateway_api.models import HTTPPort, ServiceNode, ServiceCluster;
+  from aap_gateway_api.models import HTTPPort, Route, ServiceNode, ServiceCluster;
   from aap_gateway_api.models.migrate_data import MigrateServiceDataHasRan;
   HTTPPort.objects.all().delete();
+  Route.objects.all().delete();
   ServiceNode.objects.all().delete();
   ServiceCluster.objects.all().delete();
   MigrateServiceDataHasRan.mark_migration_not_completed()

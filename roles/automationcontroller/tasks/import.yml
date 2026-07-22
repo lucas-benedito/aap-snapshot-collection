@@ -5,6 +5,7 @@
     tasks_from: get_db_credentials.yml
   vars:
     component_name: "{{ automationcontroller_component_name }}"
+  when: _artifact_db_credentials is not defined or 'controller' not in _artifact_db_credentials
 
 - name: Restore database for controller
   ansible.builtin.include_role:
