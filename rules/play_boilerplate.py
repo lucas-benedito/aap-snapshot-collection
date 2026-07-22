@@ -26,6 +26,9 @@ class PlayBoilerplateRule(AnsibleLintRule):
         if file.kind != "playbook":
             return results
 
+        if "ansible.builtin.import_playbook" in data or "import_playbook" in data:
+            return results
+
         if data.get("gather_facts") is not False:
             results.append(
                 self.create_matcherror(
