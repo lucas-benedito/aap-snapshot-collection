@@ -10,8 +10,6 @@ import os
 import sys
 import types
 
-import pytest
-
 # Provide a minimal AnsibleLintRule stub so the rule modules can
 # be imported without pulling in the full ansiblelint package (which
 # requires a real ansible installation that conflicts with the mock

@@ -1,12 +1,9 @@
 """Unit tests for aap_component_info module."""
 
-import json
 import os
 import sys
 import tempfile
 import types
-
-import pytest
 
 _mock_ansible = types.ModuleType("ansible")
 _mock_module_utils = types.ModuleType("ansible.module_utils")
