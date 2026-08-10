@@ -1,0 +1,52 @@
+---
+# Called via include_tasks + loop from transfer.yml with _relay_component_name
+# / _relay_group_name set. Relays one component's database dump from the
+# gateway node to its own node, skipping components collocated with gateway
+# (already have their dump from the full extraction) and components absent
+# from the artifact (valid topology - mirrors OCP's own skip-if-absent
+# handling in consume.yml).
+- name: Relay {{ _relay_component_name }} dump if this host needs it
+  when:
+    - groups.get('gateway_groups', []) | length > 0
+    - groups.get(_relay_group_name, []) | length > 0
+    - inventory_hostname == groups[_relay_group_name][0]
+    - groups[_relay_group_name][0] != groups['gateway_groups'][0]
+  block:
+    - name: Check if {{ _relay_component_name }} dump exists in extracted artifact
+      ansible.builtin.stat:
+        path: "{{ preflight_containerized_staging_dir }}/artifact/{{ _relay_component_name }}/{{ _relay_component_name }}.pgc"
+      delegate_to: "{{ groups['gateway_groups'][0] }}"
+      register: _artifact_relay_source_stat
+
+    - name: Relay {{ _relay_component_name }} database dump
+      when: _artifact_relay_source_stat.stat.exists
+      block:
+        - name: Ensure destination directory exists for {{ _relay_component_name }} dump
+          ansible.builtin.file:
+            path: "{{ preflight_containerized_staging_dir }}/artifact/{{ _relay_component_name }}"
+            state: directory
+            mode: '0700'
+            owner: "{{ ansible_user_id }}"
+
+        - name: Relay {{ _relay_component_name }} database dump from gateway
+          ansible.posix.synchronize:
+            mode: push
+            src: "{{ preflight_containerized_staging_dir }}/artifact/{{ _relay_component_name }}/{{ _relay_component_name }}.pgc"
+            dest: "{{ preflight_containerized_staging_dir }}/artifact/{{ _relay_component_name }}/{{ _relay_component_name }}.pgc"
+            rsync_opts:
+              - "--chmod=F600"
+              - "--no-perms"
+              - "--no-owner"
+              - "--no-group"
+          delegate_to: "{{ groups['gateway_groups'][0] }}"
+
+        - name: Set ownership on relayed {{ _relay_component_name }} dump
+          ansible.builtin.file:
+            path: "{{ preflight_containerized_staging_dir }}/artifact/{{ _relay_component_name }}/{{ _relay_component_name }}.pgc"
+            owner: "{{ ansible_user_id }}"
+            mode: '0600'
+
+        - name: Set artifact_dir for downstream operations tasks on this host
+          ansible.builtin.set_fact:
+            artifact_dir: "{{ preflight_containerized_staging_dir }}"
+...

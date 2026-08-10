@@ -4,6 +4,9 @@
     src: "{{ artifact_dir }}/{{ artifact_filename }}"
     dest: "{{ artifact_dir }}"
 
+- name: Verify extracted artifact content checksums
+  ansible.builtin.include_tasks: verify_content.yml
+
 - name: Validate extracted artifact
   ansible.builtin.include_tasks: validate.yml
 

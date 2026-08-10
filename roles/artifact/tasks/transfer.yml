@@ -1,0 +1,137 @@
+---
+# Transfer the artifact to the containerized target. OCP stages the artifact
+# into a temp pod/PVC instead (see roles/ocp_utils/tasks/transfer_artifact.yml).
+- name: Transfer artifact to containerized target
+  when: aap_platform == 'containerized'
+  block:
+    # The full artifact (which can be gigabytes, e.g. hub content) is
+    # transferred to the gateway node only, not to every component's host -
+    # each component's database dump is then relayed on to its own node
+    # below, which is a much smaller transfer.
+    - name: Transfer and extract full artifact on the gateway node
+      when:
+        - groups.get('gateway_groups', []) | length > 0
+        - inventory_hostname == groups['gateway_groups'][0]
+      block:
+        # ansible_user_id is already gathered by preflight's
+        # check_services.yml (containerized block) earlier in this playbook.
+        # _preflight_resolved_artifact is already resolved to an absolute,
+        # symlink-followed path and asserted to exist by preflight's
+        # check_import_vars.yml, and is broadcast to every host in this run.
+        - name: Ensure containerized artifact staging directory exists
+          ansible.builtin.file:
+            path: "{{ preflight_containerized_staging_dir }}"
+            state: directory
+            mode: '0700'
+            owner: "{{ ansible_user_id }}"
+
+        - name: Transfer artifact to containerized target
+          ansible.posix.synchronize:
+            mode: push
+            src: "{{ _preflight_resolved_artifact }}"
+            dest: "{{ preflight_containerized_staging_dir }}/"
+            rsync_opts:
+              - "--chmod=F600"
+              - "--no-perms"
+              - "--no-owner"
+              - "--no-group"
+
+        - name: Transfer artifact checksum file to containerized target
+          ansible.posix.synchronize:
+            mode: push
+            src: "{{ _preflight_resolved_artifact }}.{{ artifact_checksum_algo }}"
+            dest: "{{ preflight_containerized_staging_dir }}/"
+            rsync_opts:
+              - "--chmod=F600"
+              - "--no-perms"
+              - "--no-owner"
+              - "--no-group"
+
+        # sha256sum.txt's checksum line embeds the artifact's original
+        # basename (see package.yml's "Create artifact checksum file"), so
+        # the transferred copy must keep that name for verify.yml's
+        # `sha256sum --check` to find it - stat the staging directory rather
+        # than assuming _preflight_resolved_artifact's basename survived the
+        # transfer unchanged.
+        - name: Stat transferred artifact to determine its filename
+          ansible.builtin.stat:
+            path: "{{ preflight_containerized_staging_dir }}/{{ _preflight_resolved_artifact | basename }}"
+          register: _artifact_source_stat
+
+        - name: Verify transferred artifact filename matches expected name
+          ansible.builtin.assert:
+            that: _artifact_source_stat.stat.exists
+            fail_msg: >-
+              Expected the transferred artifact at
+              {{ preflight_containerized_staging_dir }}/{{ _preflight_resolved_artifact | basename }}
+              but it was not found - the transfer may have altered the filename.
+
+        - name: Set the transferred artifact's filename for downstream tasks
+          ansible.builtin.set_fact:
+            _artifact_source: "{{ _artifact_source_stat.stat.path | ansible.builtin.basename }}"
+
+        - name: Set ownership on transferred artifact and checksum file
+          ansible.builtin.file:
+            path: "{{ item }}"
+            owner: "{{ ansible_user_id }}"
+            mode: '0600'
+          loop:
+            - "{{ preflight_containerized_staging_dir }}/{{ _artifact_source }}"
+            - "{{ preflight_containerized_staging_dir }}/{{ _artifact_source }}.{{ artifact_checksum_algo }}"
+          loop_control:
+            label: "{{ item | basename }}"
+
+        - name: Verify transferred artifact checksum
+          ansible.builtin.include_tasks: verify.yml
+          vars:
+            artifact_dir: "{{ preflight_containerized_staging_dir }}"
+            artifact_filename: "{{ _artifact_source }}"
+
+        - name: Extract and validate artifact on containerized target
+          ansible.builtin.include_tasks: extract.yml
+          vars:
+            artifact_dir: "{{ preflight_containerized_staging_dir }}"
+            artifact_filename: "{{ _artifact_source }}"
+
+        # unarchive preserves whatever modes were baked into the tarball, so
+        # explicitly lock down the extracted tree regardless (it contains
+        # secrets.yml).
+        - name: Set permissions on extracted artifact
+          ansible.builtin.file:
+            path: "{{ preflight_containerized_staging_dir }}/artifact"
+            state: directory
+            mode: 'u=rwX,go='
+            owner: "{{ ansible_user_id }}"
+            recurse: true
+
+        - name: Persist artifact_dir on this host for downstream operations tasks
+          ansible.builtin.set_fact:
+            artifact_dir: "{{ preflight_containerized_staging_dir }}"
+
+        # run_once broadcasts the fact to every host in this play, including
+        # HA replica hosts (index > 0) in any component group, which never
+        # run this block themselves and would otherwise never get these vars.
+        # Current code only ever reads them on a group's first host, but this
+        # keeps them available if that ever changes (see HA secrets follow-up).
+        - name: Broadcast artifact secrets and manifest to all hosts
+          ansible.builtin.set_fact:
+            artifact_secrets: "{{ artifact_secrets }}"
+            artifact_manifest: "{{ artifact_manifest }}"
+          run_once: true
+          no_log: "{{ __artifact_no_log }}"
+
+    # Relay just each remote component's own database dump from the gateway
+    # node - skipped for a component collocated with gateway (e.g.
+    # all-in-one), which already has its dump locally from the block above.
+    - name: Relay each component's database dump to its own node
+      ansible.builtin.include_tasks: relay.yml
+      loop:
+        - { name: controller, group: controller_groups }
+        - { name: hub, group: hub_groups }
+        - { name: eda, group: eda_groups }
+      loop_control:
+        label: "{{ item.name }}"
+      vars:
+        _relay_component_name: "{{ item.name }}"
+        _relay_group_name: "{{ item.group }}"
+...
