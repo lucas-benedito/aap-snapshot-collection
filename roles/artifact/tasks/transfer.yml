@@ -108,16 +108,17 @@
           ansible.builtin.set_fact:
             artifact_dir: "{{ preflight_containerized_staging_dir }}"
 
-        # run_once broadcasts the fact to every host in this play, including
-        # HA replica hosts (index > 0) in any component group, which never
-        # run this block themselves and would otherwise never get these vars.
-        # Current code only ever reads them on a group's first host, but this
-        # keeps them available if that ever changes (see HA secrets follow-up).
+        # delegate_facts (not run_once) so the broadcast doesn't depend on
+        # gateway being the first host in the play's batch.
         - name: Broadcast artifact secrets and manifest to all hosts
           ansible.builtin.set_fact:
             artifact_secrets: "{{ artifact_secrets }}"
             artifact_manifest: "{{ artifact_manifest }}"
-          run_once: true
+          delegate_to: "{{ item }}"
+          delegate_facts: true
+          loop: "{{ ansible_play_hosts_all }}"
+          loop_control:
+            label: "{{ item }}"
           no_log: "{{ __artifact_no_log }}"
 
     # Relay just each remote component's own database dump from the gateway

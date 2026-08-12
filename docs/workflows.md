@@ -98,6 +98,21 @@ When `aap_platform: containerized`:
 - Creates a temporary PostgreSQL deployment with the PVC mounted
 - Transfers the artifact to the temporary pod
 
+### Phase 4: Prepare Migration Resources (Containerized only)
+
+- Transfers and extracts the full artifact once, on the gateway host only
+  (`groups['gateway_groups'][0]`) - the full artifact can be gigabytes (e.g.
+  hub content), so it is not copied to every component host
+- Verifies the transferred artifact's checksum and re-locks permissions on
+  the extracted tree (it contains `secrets.yml`)
+- Relays just each remote component's own database dump from the gateway
+  node to that component's own host, so restore can run from a node with
+  network access to its (potentially external, network-isolated) database.
+  Skipped for a component collocated with gateway (e.g. all-in-one), which
+  already has its dump locally
+- Requires SSH connectivity from the gateway host to each other component
+  host for the relay step
+
 ### Phase 5: Import Databases and Secrets
 
 For each component listed in the artifact manifest:
@@ -189,9 +204,12 @@ against the new environment.
    the repair API until it reaches a terminal state (`completed`, `failed`, or
    `canceled`). Reports corrupted and repaired artifact counts on success. Fails
    the play if the task does not complete successfully. If the primary API call
-   fails on OCP, a fallback path retries via `curl` from the hub pod. The
-   polling timeout is configurable via `automationhub_pulp_repair_retries` and
-   `automationhub_pulp_repair_delay` (default: 120 retries x 30s = 60 minutes)
+   fails on OCP, a fallback path retries via `curl` from the hub pod and polls
+   again to completion. Each poll's timeout is configurable via
+   `automationhub_pulp_repair_retries` and `automationhub_pulp_repair_delay`
+   (default: 120 retries x 30s = 60 minutes per poll) - if the OCP `curl`
+   fallback is triggered, the worst-case wait before the play fails is up to
+   roughly double that, since the fallback polls for the same duration again
 3. **Reset admin password** (OCP) - reads the `hub-admin-password` K8s Secret
    and runs `pulpcore-manager reset-admin-password` to sync the database
    password

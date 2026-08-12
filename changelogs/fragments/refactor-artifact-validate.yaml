@@ -1,4 +1,5 @@
 ---
-minor_changes:
-  - Move validate_artifact role content into the artifact role as artifact/validate.yml.
+breaking_changes:
+  - Remove the validate_artifact role and its validate_artifact_dir/validate_artifact_supported_schema_versions
+    variables; use the artifact role's artifact/validate.yml tasks instead.
 ...
