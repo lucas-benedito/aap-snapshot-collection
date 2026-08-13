@@ -54,4 +54,26 @@
     state: directory
     mode: '0750'
   when: groups.get('eda_groups', []) | length > 0
+
+# This runs on localhost, but component export tasks (automationcontroller/
+# automationeda/automationgateway/automationhub export.yml) reference
+# __artifact_build_dir on their own remote hosts to fetch DB dumps back to
+# the control node. That reference sits 2-3 include_role levels deep
+# (artifact -> automationX -> operations -> postgresql), and relying on
+# each remote host to independently re-derive the artifact role's default
+# through that chain is fragile - broadcast the already-resolved value as a
+# fact instead, the same way transfer.yml does for the import side.
+- name: Broadcast artifact build directory to component hosts
+  ansible.builtin.set_fact:
+    __artifact_build_dir: "{{ __artifact_build_dir }}"
+  delegate_to: "{{ item }}"
+  delegate_facts: true
+  loop: >-
+    {{ (groups.get('controller_groups', [])
+        + groups.get('eda_groups', [])
+        + groups.get('gateway_groups', [])
+        + groups.get('hub_groups', []))
+       | unique }}
+  loop_control:
+    label: "{{ item }}"
 ...
