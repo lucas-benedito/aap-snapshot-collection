@@ -1,0 +1,9 @@
+---
+bugfixes:
+  - artifact - pass remote_src to the extract task when unpacking an
+    artifact already staged on a containerized target host. extract.yml
+    is shared with the main import playbook's control-node extraction,
+    where remote_src must stay false, but transfer.yml's containerized
+    on-target extraction needs it true - it previously always defaulted
+    to false, causing "Could not find or access ... on the Ansible
+    Controller" when extracting on the gateway host.

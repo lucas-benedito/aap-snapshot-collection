@@ -3,6 +3,7 @@
   ansible.builtin.unarchive:
     src: "{{ artifact_dir }}/{{ artifact_filename }}"
     dest: "{{ artifact_dir }}"
+    remote_src: "{{ _artifact_extract_remote_src | default(false) }}"
 
 - name: Verify extracted artifact content checksums
   ansible.builtin.include_tasks: verify_content.yml

@@ -92,6 +92,10 @@
           vars:
             artifact_dir: "{{ preflight_containerized_staging_dir }}"
             artifact_filename: "{{ _artifact_source }}"
+            # The artifact was just rsynced onto this host above, not onto
+            # the control node - extract.yml's default (extract-on-
+            # localhost, used by the main import playbook) doesn't apply.
+            _artifact_extract_remote_src: true
 
         # unarchive preserves whatever modes were baked into the tarball, so
         # explicitly lock down the extracted tree regardless (it contains
