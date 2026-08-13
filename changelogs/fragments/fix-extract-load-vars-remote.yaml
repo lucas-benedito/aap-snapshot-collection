@@ -1,0 +1,8 @@
+---
+bugfixes:
+  - artifact - load secrets.yml/manifest.yml via slurp instead of
+    include_vars when extracting on a remote containerized target host.
+    include_vars has no remote_src equivalent and always reads locally on
+    the control node, causing "Could not find or access ... on the
+    Ansible Controller" once the artifact is extracted on the gateway
+    host instead of localhost.
