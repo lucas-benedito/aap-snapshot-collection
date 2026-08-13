@@ -79,4 +79,50 @@
       register: _automationhub_content_extract
       failed_when: _automationhub_content_extract.rc != 0
       changed_when: _automationhub_content_extract.rc == 0
+
+- name: Restore hub content to containerized target
+  when:
+    - aap_platform == 'containerized'
+    - artifact_hub_has_content_data | default(false)
+  block:
+    - name: Get hub container details
+      containers.podman.podman_container_info:
+        name: automation-hub-api
+      register: _automationhub_container
+
+    - name: Resolve hub data path from container mounts
+      ansible.builtin.set_fact:
+        _automationhub_data_path: >-
+          {{ _automationhub_container.containers[0].Mounts
+             | selectattr('Destination', 'equalto', '/var/lib/pulp')
+             | map(attribute='Source') | first }}
+
+    # The media directory is a bind-mounted host volume, not a
+    # freshly-provisioned PVC like OCP's - clear it first so restored
+    # content fully replaces what's there rather than merging with it.
+    # Ownership/mode are captured and reapplied rather than assumed, since
+    # they reflect whatever uid the container's rootless namespace expects.
+    - name: Stat existing hub content directory
+      ansible.builtin.stat:
+        path: "{{ _automationhub_data_path }}/media"
+      register: _automationhub_media_stat
+
+    - name: Clear existing hub content before restore
+      ansible.builtin.file:
+        path: "{{ _automationhub_data_path }}/media"
+        state: absent
+
+    - name: Recreate hub content directory
+      ansible.builtin.file:
+        path: "{{ _automationhub_data_path }}/media"
+        state: directory
+        owner: "{{ _automationhub_media_stat.stat.uid }}"
+        group: "{{ _automationhub_media_stat.stat.gid }}"
+        mode: "{{ _automationhub_media_stat.stat.mode }}"
+
+    - name: Extract hub content tarball to containerized target
+      ansible.builtin.unarchive:
+        src: "{{ preflight_containerized_staging_dir }}/artifact/hub/{{ automationhub_content_tar_name }}"
+        dest: "{{ _automationhub_data_path }}/media/"
+        remote_src: true
 ...

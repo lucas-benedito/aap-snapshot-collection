@@ -108,12 +108,25 @@
           ansible.builtin.set_fact:
             artifact_dir: "{{ preflight_containerized_staging_dir }}"
 
+        # Computed here (not in consume.yml) so it can be broadcast
+        # alongside artifact_manifest and reused by the content relay below
+        # as well as by import_hub_content.yml later in the flow.
+        - name: Determine if hub content data is available in artifact
+          ansible.builtin.set_fact:
+            artifact_hub_has_content_data: >-
+              {{ artifact_manifest.components
+                 | selectattr('name', 'equalto', 'hub')
+                 | map(attribute='has_content_data')
+                 | first | default(false) | bool }}
+          # first catches missing hub component, default catches older artifacts without has_content_data
+
         # delegate_facts (not run_once) so the broadcast doesn't depend on
         # gateway being the first host in the play's batch.
         - name: Broadcast artifact secrets and manifest to all hosts
           ansible.builtin.set_fact:
             artifact_secrets: "{{ artifact_secrets }}"
             artifact_manifest: "{{ artifact_manifest }}"
+            artifact_hub_has_content_data: "{{ artifact_hub_has_content_data }}"
           delegate_to: "{{ item }}"
           delegate_facts: true
           loop: "{{ ansible_play_hosts_all }}"
@@ -135,4 +148,16 @@
       vars:
         _relay_component_name: "{{ item.name }}"
         _relay_group_name: "{{ item.group }}"
+
+    # Hub content can be large and is optional, so it's relayed separately
+    # from the mandatory per-component dumps above, keyed off
+    # has_content_data. Delegated into automationhub (rather than calling
+    # relay.yml directly with a hardcoded filename here) so its
+    # automationhub_content_tar_name default is loaded first - this role
+    # hasn't been included for any host yet at this point in the play.
+    - name: Relay hub content tarball to its own node
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.automationhub
+        tasks_from: relay_content.yml
+      when: artifact_hub_has_content_data | default(false)
 ...

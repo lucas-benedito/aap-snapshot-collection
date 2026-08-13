@@ -1,0 +1,7 @@
+---
+bugfixes:
+  - automationhub - restore Pulp content data during containerized import
+    when the artifact includes it, mirroring the existing OCP file-storage
+    restore. The existing bind-mounted content directory is cleared before
+    extraction so restored content fully replaces what was there rather
+    than merging with it.

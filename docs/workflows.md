@@ -110,6 +110,9 @@ When `aap_platform: containerized`:
   network access to its (potentially external, network-isolated) database.
   Skipped for a component collocated with gateway (e.g. all-in-one), which
   already has its dump locally
+- If the artifact includes hub content data, relays the hub content
+  tarball to the hub host the same way (skipped when hub is collocated
+  with gateway)
 - Requires SSH connectivity from the gateway host to each other component
   host for the relay step
 
@@ -126,11 +129,16 @@ For each component listed in the artifact manifest:
    - OCP: patches Kubernetes Secrets with artifact values
    - Containerized: creates/updates podman secrets
 
-**Hub-specific:** After the hub database is restored, the hub file-storage
-PVC is deleted (OCP only) so the operator provisions a fresh empty volume on
-resume. Content is then re-synced from configured remotes. Pulp repair during
-reconciliation cleans up any remaining stale artifact references in the
-restored database.
+**Hub-specific:** After the hub database is restored, existing content data
+is replaced with the artifact's content (when present):
+- OCP: the hub file-storage PVC is deleted so the operator provisions a
+  fresh empty volume, then the content tarball is extracted into it
+- Containerized: the existing content directory (resolved from the hub
+  container's bind-mounted volume) is cleared and the content tarball is
+  extracted into it
+
+Pulp repair during reconciliation cleans up any remaining stale artifact
+references in the restored database.
 
 **Platform routing:**
 - OCP: all imports run on `localhost` using `kubernetes.core.k8s_exec`

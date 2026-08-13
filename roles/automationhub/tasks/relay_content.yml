@@ -1,0 +1,10 @@
+---
+- name: Relay hub content tarball to its own node
+  ansible.builtin.include_role:
+    name: ansible.aap_snapshot.artifact
+    tasks_from: relay.yml
+  vars:
+    _relay_component_name: hub
+    _relay_group_name: hub_groups
+    _relay_relative_path: "hub/{{ automationhub_content_tar_name }}"
+...
