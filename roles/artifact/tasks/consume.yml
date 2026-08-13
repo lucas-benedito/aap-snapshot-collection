@@ -39,6 +39,53 @@
         label: "{{ item }}"
       run_once: true
 
+    # --- Pre-discover DB credentials while services are still running ---
+    # operations/get_db_credentials.yml's containerized branch reads DB
+    # settings via podman_container_exec into each component's own app
+    # container, which requires that container to be running - it must
+    # run before Stop below, not after (each component's import.yml calls
+    # get_db_credentials.yml again post-stop, but it's a no-op there since
+    # the result is already cached in postgresql_auth_settings).
+    - name: Get DB credentials for controller
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.operations
+        tasks_from: get_db_credentials.yml
+      vars:
+        component_name: controller
+      when:
+        - groups.get('controller_groups', []) | length > 0
+        - inventory_hostname == groups['controller_groups'][0]
+
+    - name: Get DB credentials for hub
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.operations
+        tasks_from: get_db_credentials.yml
+      vars:
+        component_name: hub
+      when:
+        - groups.get('hub_groups', []) | length > 0
+        - inventory_hostname == groups['hub_groups'][0]
+
+    - name: Get DB credentials for gateway
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.operations
+        tasks_from: get_db_credentials.yml
+      vars:
+        component_name: gateway
+      when:
+        - groups.get('gateway_groups', []) | length > 0
+        - inventory_hostname == groups['gateway_groups'][0]
+
+    - name: Get DB credentials for eda
+      ansible.builtin.include_role:
+        name: ansible.aap_snapshot.operations
+        tasks_from: get_db_credentials.yml
+      vars:
+        component_name: eda
+      when:
+        - groups.get('eda_groups', []) | length > 0
+        - inventory_hostname == groups['eda_groups'][0]
+
     # --- Stop services ---
     - name: Stop monitoring
       ansible.builtin.include_role:
