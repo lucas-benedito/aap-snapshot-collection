@@ -1,0 +1,176 @@
+---
+# Extract secrets from an AAP snapshot artifact or containerized backup directory
+# and write an extra_vars file for use with the containerized installer.
+#
+# Usage (artifact):
+#   ansible-playbook generate_installer_extra_vars.yaml \
+#     -e artifact_file=/path/to/snapshot.tar
+#
+# Usage (backup):
+#   ansible-playbook generate_installer_extra_vars.yaml \
+#     -e secrets_source=backup \
+#     -e backup_dir=/path/to/backups \
+#     -e backup_controller_host=automationcontroller-0 \
+#     -e backup_hub_host=automationhub-0 \
+#     -e backup_eda_host=automationedacontroller-0 \
+#     -e backup_gateway_host=automationgateway-0
+#
+# Then pass the output file to the installer:
+#   ansible-playbook ... -e @secrets_extra_vars.yml
+- name: Generate installer extra vars
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    secrets_source: artifact
+    # artifact source vars
+    _artifact_path: >-
+      {{ artifact_file if ((artifact_file | default('')) | first == '/')
+         else (lookup('env', 'PWD') ~ '/' ~ artifact_file) }}
+    artifact_dir: "{{ _artifact_path | dirname }}"
+    # backup source vars
+    backup_dir: "{{ lookup('env', 'HOME') }}/setup/backups"
+    backup_controller_host: automationcontroller-0
+    backup_hub_host: automationhub-0
+    backup_eda_host: automationedacontroller-0
+    backup_gateway_host: automationgateway-0
+    # output
+    extra_vars_file: >-
+      {{ artifact_dir ~ '/secrets_extra_vars.yml'
+         if secrets_source == 'artifact'
+         else backup_dir ~ '/secrets_extra_vars.yml' }}
+  tasks:
+
+    # --- Artifact source ---
+    - name: Extract artifact secrets file
+      ansible.builtin.unarchive:
+        src: "{{ _artifact_path }}"
+        dest: "{{ artifact_dir }}"
+        remote_src: true
+        extra_opts:
+          - artifact/secrets.yml
+      when: secrets_source == 'artifact'
+
+    - name: Slurp artifact secrets
+      ansible.builtin.slurp:
+        src: "{{ artifact_dir }}/artifact/secrets.yml"
+      register: _artifact_secrets_raw
+      no_log: true
+      when: secrets_source == 'artifact'
+
+    - name: Set secrets fact from artifact
+      ansible.builtin.set_fact:
+        _secrets:
+          controller_secret_key: "{{ (_artifact_secrets_raw.content | b64decode | from_yaml).get('controller_secret_key') }}"
+          hub_db_fields_encryption_key: "{{ (_artifact_secrets_raw.content | b64decode | from_yaml).get('hub_db_fields_encryption_key') }}"
+          hub_secret: "{{ (_artifact_secrets_raw.content | b64decode | from_yaml).get('hub_secret') }}"
+          eda_secret_key: "{{ (_artifact_secrets_raw.content | b64decode | from_yaml).get('eda_secret_key') }}"
+          gateway_secret_key: "{{ (_artifact_secrets_raw.content | b64decode | from_yaml).get('gateway_secret_key') }}"
+      no_log: true
+      when: secrets_source == 'artifact'
+
+    - name: Remove extracted secrets file
+      ansible.builtin.file:
+        path: "{{ artifact_dir }}/artifact/secrets.yml"
+        state: absent
+      when: secrets_source == 'artifact'
+
+    # --- Backup source ---
+    - name: Read secrets from backup tarballs
+      ansible.builtin.script:
+        cmd: /dev/stdin
+        executable: python3
+        stdin: |
+          import json, base64, tarfile, sys
+
+          def get_podman_secrets(tar_path, target_names):
+              try:
+                  with tarfile.open(tar_path) as t:
+                      meta = json.loads(t.extractfile(
+                          '.local/share/containers/storage/secrets/secrets.json').read())
+                      data = json.loads(t.extractfile(
+                          '.local/share/containers/storage/secrets/filedriver/secretsdata.json').read())
+              except Exception as e:
+                  return {}
+              id_to_name = {v['id']: v['name'] for v in meta['secrets'].values()}
+              return {
+                  id_to_name[sid]: base64.b64decode(val).decode()
+                  for sid, val in data.items()
+                  if id_to_name.get(sid) in target_names
+              }
+
+          d = "{{ backup_dir }}"
+          raw = {}
+          raw.update(get_podman_secrets(f"{d}/controller_{{ backup_controller_host }}.tar.gz",
+                                        ['controller_secret_key']))
+          raw.update(get_podman_secrets(f"{d}/hub_{{ backup_hub_host }}.tar.gz",
+                                        ['hub_secret_key', 'hub_database_fields']))
+          raw.update(get_podman_secrets(f"{d}/eda_{{ backup_eda_host }}.tar.gz",
+                                        ['eda_secret_key']))
+          raw.update(get_podman_secrets(f"{d}/gateway_{{ backup_gateway_host }}.tar.gz",
+                                        ['gateway_secret_key']))
+
+          # Map podman secret names to artifact key names
+          out = {
+              'controller_secret_key':      raw.get('controller_secret_key'),
+              'hub_db_fields_encryption_key': raw.get('hub_database_fields'),
+              'hub_secret':                 raw.get('hub_secret_key'),
+              'eda_secret_key':             raw.get('eda_secret_key'),
+              'gateway_secret_key':         raw.get('gateway_secret_key'),
+          }
+          print(json.dumps(out))
+      register: _backup_secrets_raw
+      no_log: true
+      when: secrets_source == 'backup'
+
+    - name: Set secrets fact from backup
+      ansible.builtin.set_fact:
+        _secrets: "{{ _backup_secrets_raw.stdout | from_json }}"
+      no_log: true
+      when: secrets_source == 'backup'
+
+    # --- Common: build and write extra_vars ---
+    - name: Build extra vars
+      ansible.builtin.set_fact:
+        _extra_vars: >-
+          {{
+            {
+              'controller_secret_key': _secrets.get('controller_secret_key'),
+              '__hub_database_fields': _secrets.get('hub_db_fields_encryption_key'),
+              'hub_secret_key':        _secrets.get('hub_secret'),
+              'eda_secret_key':        _secrets.get('eda_secret_key'),
+              'gateway_secret_key':    _secrets.get('gateway_secret_key'),
+            } | dict2items
+              | rejectattr('value', 'none')
+              | list | items2dict
+          }}
+      no_log: true
+
+    - name: Warn about missing secret keys
+      ansible.builtin.debug:
+        msg: "WARNING: '{{ item.key }}' not found in {{ secrets_source }} secrets - skipped"
+      loop: "{{ _extra_vars_all | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
+      vars:
+        _extra_vars_all:
+          controller_secret_key: "{{ _secrets.get('controller_secret_key') }}"
+          hub_db_fields_encryption_key: "{{ _secrets.get('hub_db_fields_encryption_key') }}"
+          hub_secret: "{{ _secrets.get('hub_secret') }}"
+          eda_secret_key: "{{ _secrets.get('eda_secret_key') }}"
+          gateway_secret_key: "{{ _secrets.get('gateway_secret_key') }}"
+      when: item.value == None
+
+    - name: Write installer extra vars file
+      ansible.builtin.copy:
+        dest: "{{ extra_vars_file }}"
+        mode: "0600"
+        content: |
+          ---
+          {{ _extra_vars | to_nice_yaml(indent=2) }}
+      no_log: true
+
+    - name: Report output path
+      ansible.builtin.debug:
+        msg: "Extra vars written to {{ extra_vars_file }}"
+...
