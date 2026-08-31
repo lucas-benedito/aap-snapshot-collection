@@ -21,6 +21,7 @@
   hosts: localhost
   connection: local
   gather_facts: false
+  any_errors_fatal: true
   vars:
     secrets_source: artifact
     # artifact source vars
@@ -55,7 +56,7 @@
       ansible.builtin.slurp:
         src: "{{ artifact_dir }}/artifact/secrets.yml"
       register: _artifact_secrets_raw
-      no_log: true
+      no_log: "{{ not (disable_no_log | default(false) | bool) }}"
       when: secrets_source == 'artifact'
 
     - name: Set secrets fact from artifact
@@ -66,7 +67,7 @@
           hub_secret: "{{ (_artifact_secrets_raw.content | b64decode | from_yaml).get('hub_secret') }}"
           eda_secret_key: "{{ (_artifact_secrets_raw.content | b64decode | from_yaml).get('eda_secret_key') }}"
           gateway_secret_key: "{{ (_artifact_secrets_raw.content | b64decode | from_yaml).get('gateway_secret_key') }}"
-      no_log: true
+      no_log: "{{ not (disable_no_log | default(false) | bool) }}"
       when: secrets_source == 'artifact'
 
     - name: Remove extracted secrets file
@@ -76,11 +77,11 @@
       when: secrets_source == 'artifact'
 
     # --- Backup source ---
-    - name: Read secrets from backup tarballs
-      ansible.builtin.script:
-        cmd: /dev/stdin
-        executable: python3
-        stdin: |
+    - name: Write backup secrets extraction script
+      ansible.builtin.copy:
+        dest: /tmp/_aap_get_backup_secrets.py
+        mode: '0700'
+        content: |
           import json, base64, tarfile, sys
 
           def get_podman_secrets(tar_path, target_names):
@@ -90,7 +91,7 @@
                           '.local/share/containers/storage/secrets/secrets.json').read())
                       data = json.loads(t.extractfile(
                           '.local/share/containers/storage/secrets/filedriver/secretsdata.json').read())
-              except Exception as e:
+              except Exception:
                   return {}
               id_to_name = {v['id']: v['name'] for v in meta['secrets'].values()}
               return {
@@ -112,21 +113,32 @@
 
           # Map podman secret names to artifact key names
           out = {
-              'controller_secret_key':      raw.get('controller_secret_key'),
+              'controller_secret_key':        raw.get('controller_secret_key'),
               'hub_db_fields_encryption_key': raw.get('hub_database_fields'),
-              'hub_secret':                 raw.get('hub_secret_key'),
-              'eda_secret_key':             raw.get('eda_secret_key'),
-              'gateway_secret_key':         raw.get('gateway_secret_key'),
+              'hub_secret':                   raw.get('hub_secret_key'),
+              'eda_secret_key':               raw.get('eda_secret_key'),
+              'gateway_secret_key':           raw.get('gateway_secret_key'),
           }
           print(json.dumps(out))
+      when: secrets_source == 'backup'
+
+    - name: Read secrets from backup tarballs
+      ansible.builtin.command:
+        cmd: python3 /tmp/_aap_get_backup_secrets.py
       register: _backup_secrets_raw
-      no_log: true
+      no_log: "{{ not (disable_no_log | default(false) | bool) }}"
+      when: secrets_source == 'backup'
+
+    - name: Remove backup secrets extraction script
+      ansible.builtin.file:
+        path: /tmp/_aap_get_backup_secrets.py
+        state: absent
       when: secrets_source == 'backup'
 
     - name: Set secrets fact from backup
       ansible.builtin.set_fact:
         _secrets: "{{ _backup_secrets_raw.stdout | from_json }}"
-      no_log: true
+      no_log: "{{ not (disable_no_log | default(false) | bool) }}"
       when: secrets_source == 'backup'
 
     # --- Common: build and write extra_vars ---
@@ -144,7 +156,7 @@
               | rejectattr('value', 'none')
               | list | items2dict
           }}
-      no_log: true
+      no_log: "{{ not (disable_no_log | default(false) | bool) }}"
 
     - name: Warn about missing secret keys
       ansible.builtin.debug:
@@ -168,7 +180,7 @@
         content: |
           ---
           {{ _extra_vars | to_nice_yaml(indent=2) }}
-      no_log: true
+      no_log: "{{ not (disable_no_log | default(false) | bool) }}"
 
     - name: Report output path
       ansible.builtin.debug:
