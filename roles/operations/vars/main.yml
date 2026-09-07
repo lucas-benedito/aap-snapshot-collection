@@ -66,6 +66,7 @@ _operations_component_config:
     secret_keys: ["gateway_secret_key"]
     k8s_secret_name: "{{ operations_aap_instance_name }}-db-fields-encryption-secret"
     k8s_secret_field: "secret_key"
+    update_ocp_secret: false
     postgres_secret: "{{ operations_aap_instance_name }}-gateway-postgres-configuration"
     podman_secret_name: "gateway_secret_key"
     admin_password_secret: "admin-password"
