@@ -24,6 +24,25 @@
   delay: 15
   when: aap_platform == 'operator'
 
+- name: Wait for EDA API deployment rollout to complete
+  kubernetes.core.k8s_info:
+    kind: Deployment
+    namespace: "{{ automationeda_ocp_namespace }}"
+    label_selectors:
+      - "app.kubernetes.io/component=eda-api"
+  environment: "{{ automationeda_ocp_environment }}"
+  register: _automationeda_deploy
+  until: >-
+    _automationeda_deploy.resources | length > 0
+    and (_automationeda_deploy.resources[0].status.updatedReplicas | default(0))
+        == (_automationeda_deploy.resources[0].spec.replicas | default(1))
+    and (_automationeda_deploy.resources[0].status.readyReplicas | default(0))
+        == (_automationeda_deploy.resources[0].spec.replicas | default(1))
+    and (_automationeda_deploy.resources[0].status.unavailableReplicas | default(0)) == 0
+  retries: 30
+  delay: 10
+  when: aap_platform == 'operator'
+
 - name: Re-discover EDA pod
   ansible.builtin.include_role:
     name: ansible.aap_snapshot.ocp_utils
