@@ -1,0 +1,13 @@
+---
+bugfixes:
+  - >-
+    automationgateway cleanup - stop calling
+    MigrateServiceDataHasRan.mark_migration_not_completed() during gateway
+    cleanup. On OCP, this flag causes the gateway operator to regenerate all
+    ServiceKey records during reconciliation, racing against component pods
+    that have already started with service keys from the restored gateway DB
+    and causing 401 errors on resource_sync. The service data migration
+    creates ServiceType, ServiceCluster, and ServiceKey objects which all
+    survive the import from the restored DB, so resetting the flag is
+    unnecessary. ServiceNode and Route are still wiped and repopulated by
+    the operator.
